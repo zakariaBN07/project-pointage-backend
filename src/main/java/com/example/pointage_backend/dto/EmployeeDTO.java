@@ -17,4 +17,7 @@ public class EmployeeDTO {
     private String pointageSortie;
 
     private String supervisorId;
+    private String responsableId;
+
+    
 }

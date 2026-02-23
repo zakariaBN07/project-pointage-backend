@@ -34,6 +34,7 @@ public class EmployeeService {
                 .pointageEntree(dto.getPointageEntree())
                 .pointageSortie(dto.getPointageSortie())
                 .supervisorId(dto.getSupervisorId())
+                .responsableId(dto.getResponsableId())
                 .build();
 
         Employee saved = employeeRepository.save(employee);
@@ -43,6 +44,21 @@ public class EmployeeService {
     // DELETE
     public void deleteEmployee(String id) {
         employeeRepository.deleteById(id);
+    }
+
+    // GET EMPLOYEES BY FILTER
+    public List<EmployeeDTO> getEmployeesByFilter(String supervisorId, String responsableId) {
+        List<Employee> employees;
+        if (supervisorId != null && !supervisorId.isEmpty()) {
+            employees = employeeRepository.findBySupervisorId(supervisorId);
+        } else if (responsableId != null && !responsableId.isEmpty()) {
+            employees = employeeRepository.findByResponsableId(responsableId);
+        } else {
+            employees = employeeRepository.findAll();
+        }
+        return employees.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     // MAPPER
@@ -55,6 +71,7 @@ public class EmployeeService {
                 .pointageEntree(employee.getPointageEntree())
                 .pointageSortie(employee.getPointageSortie())
                 .supervisorId(employee.getSupervisorId())
+                .responsableId(employee.getResponsableId())
                 .build();
     }
 }

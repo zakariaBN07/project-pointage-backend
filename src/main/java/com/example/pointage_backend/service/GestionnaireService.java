@@ -23,6 +23,7 @@ public class GestionnaireService {
         Gestionnaire gestionnaire = Gestionnaire.builder()
                 .id(dto.getId())
                 .name(dto.getName())
+                .email(dto.getEmail())
                 .role(dto.getRole())
                 .password(dto.getPassword())
                 .build();
@@ -38,6 +39,7 @@ public class GestionnaireService {
         return GestionnaireDTO.builder()
                 .id(gestionnaire.getId())
                 .name(gestionnaire.getName())
+                .email(gestionnaire.getEmail())
                 .role(gestionnaire.getRole())
                 .password(gestionnaire.getPassword())
                 .build();

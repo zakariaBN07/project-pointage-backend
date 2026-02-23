@@ -3,21 +3,26 @@ package com.example.pointage_backend.model;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDateTime;
 
-@Document(collection = "gestionnaires")
+@Document(collection = "password_reset_tokens")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Gestionnaire {
+public class PasswordResetToken {
     @Id
     private String id;
     
-    private String name;
-
+    private String token;
+    
+    private String gestionnaireId;
+    
     private String email;
     
-    private String role;
+    private LocalDateTime createdAt;
     
-    private String password;
+    private LocalDateTime expiresAt;
+    
+    private boolean used;
 }

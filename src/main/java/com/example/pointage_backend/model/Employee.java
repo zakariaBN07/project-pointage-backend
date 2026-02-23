@@ -22,5 +22,6 @@ public class Employee {
     private String pointageEntree;   // HH:mm:ss
     private String pointageSortie;   // HH:mm:ss
 
-    private String supervisorId;     // optional
+    private String supervisorId;     
+    private String responsableId;   
 }

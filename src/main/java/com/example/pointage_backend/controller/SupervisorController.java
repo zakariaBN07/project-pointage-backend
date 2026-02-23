@@ -17,8 +17,10 @@ public class SupervisorController {
     private final EmployeeService employeeService;
 
     @GetMapping("/employees")
-    public List<EmployeeDTO> listEmployees() {
-        return employeeService.getAllEmployees();
+    public List<EmployeeDTO> listEmployees(
+            @RequestParam(required = false) String supervisorId
+    ) {
+        return employeeService.getEmployeesByFilter(supervisorId, null);
     }
 
     @PostMapping("/employees")
