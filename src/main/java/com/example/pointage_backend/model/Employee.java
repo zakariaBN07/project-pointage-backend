@@ -24,4 +24,20 @@ public class Employee {
 
     private String supervisorId;     
     private String responsableId;   
+
+    // Attendance fields
+    private Double totHrsTravaillees;
+    private Double nbrJrsTravaillees;
+    private Double nbrJrsAbsence;
+    private Double totHrsDimanche;
+    private Double nbrJrsFeries;
+    private Double nbrJrsFeriesTravailes;
+    private Double nbrJrsConges;
+    private Double nbrJrsDeplacementsMaroc;
+    private Double nbrJrsPaniers;
+    private Double nbrJrsDetente;
+    private Double nbrJrsDeplacementsExpatrie;
+    private Double nbrJrsRecuperation;
+    private Double nbrJrsMaladie;
+    private String chantierAtelier;
 }

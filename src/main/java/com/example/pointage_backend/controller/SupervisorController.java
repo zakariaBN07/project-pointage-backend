@@ -2,6 +2,7 @@ package com.example.pointage_backend.controller;
 
 import com.example.pointage_backend.dto.EmployeeDTO;
 import com.example.pointage_backend.service.EmployeeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -24,14 +25,14 @@ public class SupervisorController {
     }
 
     @PostMapping("/employees")
-    public EmployeeDTO addEmployee(@RequestBody EmployeeDTO dto) {
+    public EmployeeDTO addEmployee(@Valid @RequestBody EmployeeDTO dto) {
         return employeeService.saveEmployee(dto);
     }
 
     @PutMapping("/employees/{id}")
     public EmployeeDTO updateEmployee(
             @PathVariable String id,
-            @RequestBody EmployeeDTO dto
+            @Valid @RequestBody EmployeeDTO dto
     ) {
         dto.setId(id);
         return employeeService.saveEmployee(dto);

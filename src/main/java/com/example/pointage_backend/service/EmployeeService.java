@@ -35,6 +35,20 @@ public class EmployeeService {
                 .pointageSortie(dto.getPointageSortie())
                 .supervisorId(dto.getSupervisorId())
                 .responsableId(dto.getResponsableId())
+                .totHrsTravaillees(dto.getTotHrsTravaillees())
+                .nbrJrsTravaillees(dto.getNbrJrsTravaillees())
+                .nbrJrsAbsence(dto.getNbrJrsAbsence())
+                .totHrsDimanche(dto.getTotHrsDimanche())
+                .nbrJrsFeries(dto.getNbrJrsFeries())
+                .nbrJrsFeriesTravailes(dto.getNbrJrsFeriesTravailes())
+                .nbrJrsConges(dto.getNbrJrsConges())
+                .nbrJrsDeplacementsMaroc(dto.getNbrJrsDeplacementsMaroc())
+                .nbrJrsPaniers(dto.getNbrJrsPaniers())
+                .nbrJrsDetente(dto.getNbrJrsDetente())
+                .nbrJrsDeplacementsExpatrie(dto.getNbrJrsDeplacementsExpatrie())
+                .nbrJrsRecuperation(dto.getNbrJrsRecuperation())
+                .nbrJrsMaladie(dto.getNbrJrsMaladie())
+                .chantierAtelier(dto.getChantierAtelier())
                 .build();
 
         Employee saved = employeeRepository.save(employee);
@@ -72,6 +86,20 @@ public class EmployeeService {
                 .pointageSortie(employee.getPointageSortie())
                 .supervisorId(employee.getSupervisorId())
                 .responsableId(employee.getResponsableId())
+                .totHrsTravaillees(employee.getTotHrsTravaillees())
+                .nbrJrsTravaillees(employee.getNbrJrsTravaillees())
+                .nbrJrsAbsence(employee.getNbrJrsAbsence())
+                .totHrsDimanche(employee.getTotHrsDimanche())
+                .nbrJrsFeries(employee.getNbrJrsFeries())
+                .nbrJrsFeriesTravailes(employee.getNbrJrsFeriesTravailes())
+                .nbrJrsConges(employee.getNbrJrsConges())
+                .nbrJrsDeplacementsMaroc(employee.getNbrJrsDeplacementsMaroc())
+                .nbrJrsPaniers(employee.getNbrJrsPaniers())
+                .nbrJrsDetente(employee.getNbrJrsDetente())
+                .nbrJrsDeplacementsExpatrie(employee.getNbrJrsDeplacementsExpatrie())
+                .nbrJrsRecuperation(employee.getNbrJrsRecuperation())
+                .nbrJrsMaladie(employee.getNbrJrsMaladie())
+                .chantierAtelier(employee.getChantierAtelier())
                 .build();
     }
 }

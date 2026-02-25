@@ -20,4 +20,6 @@ public class Gestionnaire {
     private String role;
     
     private String password;
+
+    private String siege;
 }

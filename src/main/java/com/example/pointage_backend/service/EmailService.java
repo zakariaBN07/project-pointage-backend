@@ -56,4 +56,40 @@ public class EmailService {
             return false;
         }
     }
+
+    public boolean sendNewAccountEmail(String email, String username, String password) {
+        try {
+            if (email == null || email.trim().isEmpty()) {
+                logger.warn("Cannot send email: recipient email is null or empty");
+                return false;
+            }
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(email);
+            helper.setSubject("Welcome to Pointage System - New Account Created");
+
+            String htmlContent = "<html><body style='font-family: Arial, sans-serif;'>" +
+                    "<p>Hello <strong>" + username + "</strong>,</p>" +
+                    "<p>An account has been created for you in the Pointage System.</p>" +
+                    "<p>Here are your login credentials:</p>" +
+                    "<ul>" +
+                    "<li><strong>Username:</strong> " + username + "</li>" +
+                    "<li><strong>Password:</strong> " + password + "</li>" +
+                    "</ul>" +
+                    "<p>Please log in and change your password as soon as possible.</p>" +
+                    "<p>Best regards,<br/><strong>Pointage Team</strong></p>" +
+                    "</body></html>";
+
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            logger.info("New account email sent successfully to: " + email);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to send new account email to " + email + ": " + e.getMessage(), e);
+            return false;
+        }
+    }
 }

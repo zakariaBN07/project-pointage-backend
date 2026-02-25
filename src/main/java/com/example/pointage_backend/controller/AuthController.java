@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -32,6 +33,9 @@ public class AuthController {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Value("${password.reset.token.expiration:30}")
     private long tokenExpirationMinutes;
 
@@ -41,8 +45,7 @@ public class AuthController {
 
         if (optionalGestionnaire.isPresent()) {
             Gestionnaire gestionnaire = optionalGestionnaire.get();
-            // In a real application, you should use password hashing (e.g., BCrypt)
-            if (gestionnaire.getPassword().equals(loginRequest.getPassword())) {
+            if (passwordEncoder.matches(loginRequest.getPassword(), gestionnaire.getPassword())) {
                 LoginResponse response = LoginResponse.builder()
                         .id(gestionnaire.getId())
                         .name(gestionnaire.getName())
@@ -134,7 +137,7 @@ public class AuthController {
         }
 
         Gestionnaire gestionnaire = optionalGestionnaire.get();
-        gestionnaire.setPassword(request.getNewPassword());
+        gestionnaire.setPassword(passwordEncoder.encode(request.getNewPassword()));
         gestionnaireRepository.save(gestionnaire);
 
         resetToken.setUsed(true);

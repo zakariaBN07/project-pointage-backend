@@ -45,6 +45,12 @@ public class AdminController {
         gestionnaireService.deleteGestionnaire(id);
     }
 
+    @PostMapping("/gestionnaires/{id}/reset-password")
+    public ResponseEntity<Void> resetPassword(@PathVariable String id) {
+        gestionnaireService.resetPassword(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/gestionnaires/export")
     public ResponseEntity<byte[]> exportGestionnaires() throws IOException {
         List<Gestionnaire> gestionnaires = gestionnaireRepository.findAll();
