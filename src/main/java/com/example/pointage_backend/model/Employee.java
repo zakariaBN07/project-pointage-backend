@@ -16,6 +16,9 @@ public class Employee {
 
     private String name;
     private String matricule;
+    private String affaireNumero;
+    private String client;
+    private String site;
 
     // ✅ pointage fields
     private String status;           // En attente | Présent | Absent | Sortie

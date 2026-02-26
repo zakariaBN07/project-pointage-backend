@@ -12,6 +12,10 @@ public class EmployeeDTO {
     private String id;
     private String name;
     private String matricule;
+    private String affaireNumero;
+    private String client;
+    private String site;
+
 
     private String status;
     private String pointageEntree;
