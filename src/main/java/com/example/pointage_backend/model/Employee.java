@@ -17,6 +17,7 @@ public class Employee {
     private String name;
     private String matricule;
     private String affaireNumero;
+    private String projectId;
     private String client;
     private String site;
 
@@ -43,4 +44,19 @@ public class Employee {
     private Double nbrJrsRecuperation;
     private Double nbrJrsMaladie;
     private String chantierAtelier;
+
+    /**
+     * Calculate hours worked from actual attendance data (pointageEntree and pointageSortie).
+     * Can be extended to include other attendance breakdown fields if needed.
+     * Returns the sum of various hours worked categories.
+     */
+    public Double calculateHoursWorked() {
+        double total = 0.0;
+        // Sum all actual hours worked (not including absences, leave, etc.)
+        if (this.totHrsTravaillees != null) total += this.totHrsTravaillees;
+        if (this.totHrsDimanche != null) total += this.totHrsDimanche;
+        if (this.nbrJrsFeriesTravailes != null) total += this.nbrJrsFeriesTravailes;
+        // Do not include: absences, congés, déplacements, détente, récupération, maladie
+        return total > 0 ? total : 0.0;
+    }
 }

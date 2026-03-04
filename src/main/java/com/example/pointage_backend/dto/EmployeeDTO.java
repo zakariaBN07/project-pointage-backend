@@ -13,6 +13,7 @@ public class EmployeeDTO {
     private String name;
     private String matricule;
     private String affaireNumero;
+    private String projectId;
     private String client;
     private String site;
 

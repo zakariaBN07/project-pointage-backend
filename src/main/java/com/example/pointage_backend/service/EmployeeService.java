@@ -2,7 +2,9 @@ package com.example.pointage_backend.service;
 
 import com.example.pointage_backend.dto.EmployeeDTO;
 import com.example.pointage_backend.model.Employee;
+import com.example.pointage_backend.model.Project;
 import com.example.pointage_backend.repository.EmployeeRepository;
+import com.example.pointage_backend.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final ProjectRepository projectRepository;
 
     // GET ALL
     public List<EmployeeDTO> getAllEmployees() {
@@ -26,11 +29,27 @@ public class EmployeeService {
     // SAVE / UPDATE
     public EmployeeDTO saveEmployee(EmployeeDTO dto) {
 
+        // If an affaireNumero (project number) was provided, ensure a Project exists and link it
+        String projectId = null;
+        if (dto.getAffaireNumero() != null && !dto.getAffaireNumero().isEmpty()) {
+            Project project = projectRepository.findByAffaireNumero(dto.getAffaireNumero())
+                .orElseGet(() -> {
+                Project p = Project.builder()
+                    .affaireNumero(dto.getAffaireNumero())
+                    .name(dto.getAffaireNumero())
+                    .plannedHours(null)
+                    .build();
+                return projectRepository.save(p);
+                });
+            projectId = project.getId();
+        }
+
         Employee employee = Employee.builder()
                 .id(dto.getId())
                 .name(dto.getName())
                 .matricule(dto.getMatricule())
-                .affaireNumero(dto.getAffaireNumero())
+            .affaireNumero(dto.getAffaireNumero())
+            .projectId(projectId)
                 .client(dto.getClient())
                 .site(dto.getSite())
                 .status(dto.getStatus())
@@ -85,6 +104,7 @@ public class EmployeeService {
                 .name(employee.getName())
                 .matricule(employee.getMatricule())
                 .affaireNumero(employee.getAffaireNumero())
+                .projectId(employee.getProjectId())
                 .client(employee.getClient())
                 .site(employee.getSite())
                 .status(employee.getStatus())
