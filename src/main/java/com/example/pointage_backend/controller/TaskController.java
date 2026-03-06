@@ -16,6 +16,12 @@ import java.util.List;
 public class TaskController {
     private final TaskService taskService;
 
+    // List all tasks for a given project
+    @GetMapping("/{projectId}/tasks")
+    public List<Task> listTasks(@PathVariable String projectId) {
+        return taskService.getTasksForProject(projectId);
+    }
+
     // Create tasks for a project (validate sum of weights == 100)
     @PostMapping("/{projectId}/tasks")
     @ResponseStatus(HttpStatus.CREATED)

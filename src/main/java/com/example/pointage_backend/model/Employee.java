@@ -20,6 +20,7 @@ public class Employee {
     private String projectId;
     private String client;
     private String site;
+    private String plannedHours;
 
     // ✅ pointage fields
     private String status;           // En attente | Présent | Absent | Sortie

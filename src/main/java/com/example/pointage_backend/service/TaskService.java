@@ -18,6 +18,13 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
 
+    public List<Task> getTasksForProject(String projectId) {
+        // Ensure project exists before listing tasks to avoid returning tasks for deleted projects
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+        return taskRepository.findByProjectId(project.getId());
+    }
+
     public List<Task> createTasksForProject(String projectId, List<TaskCreateDTO> tasks) {
         // validate project exists
         Project project = projectRepository.findById(projectId)

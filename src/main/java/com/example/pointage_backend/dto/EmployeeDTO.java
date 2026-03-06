@@ -16,6 +16,7 @@ public class EmployeeDTO {
     private String projectId;
     private String client;
     private String site;
+    private String plannedHours;
 
 
     private String status;
