@@ -98,6 +98,26 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
+    // GET BY MATRICULE (for Employee self-service page)
+    public List<EmployeeDTO> getEmployeesByMatricule(String matricule) {
+        if (matricule == null || matricule.isEmpty()) {
+            return List.of();
+        }
+        return employeeRepository.findByMatricule(matricule).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // GET BY NAME (for employee auth by name instead of matricule)
+    public List<EmployeeDTO> getEmployeesByName(String name) {
+        if (name == null || name.isEmpty()) {
+            return List.of();
+        }
+        return employeeRepository.findByName(name).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
     // MAPPER
     private EmployeeDTO mapToDTO(Employee employee) {
         return EmployeeDTO.builder()

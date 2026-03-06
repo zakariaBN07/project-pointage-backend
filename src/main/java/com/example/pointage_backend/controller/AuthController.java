@@ -2,6 +2,8 @@ package com.example.pointage_backend.controller;
 
 import com.example.pointage_backend.dto.*;
 import com.example.pointage_backend.model.Gestionnaire;
+import com.example.pointage_backend.dto.EmployeeDTO;
+import com.example.pointage_backend.service.EmployeeService;
 import com.example.pointage_backend.model.PasswordResetToken;
 import com.example.pointage_backend.repository.GestionnaireRepository;
 import com.example.pointage_backend.repository.PasswordResetTokenRepository;
@@ -36,6 +38,9 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmployeeService employeeService;
+
     @Value("${password.reset.token.expiration:30}")
     private long tokenExpirationMinutes;
 
@@ -57,6 +62,34 @@ public class AuthController {
 
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", "Invalid credentials");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * Simple login for employees (separate from gestionnaires).
+     * Uses Employee name (or matricule in name field) and a plaintext password stored in EmployeeDTO
+     * for academic/demo purposes.
+     */
+    @PostMapping("/employee-login")
+    public ResponseEntity<?> employeeLogin(@RequestBody LoginRequest loginRequest) {
+        // For now, rely on Employee documents fetched by name; in a real app you'd have a dedicated user collection
+        var matches = employeeService.getEmployeesByName(loginRequest.getName());
+        if (!matches.isEmpty()) {
+            EmployeeDTO emp = matches.get(0);
+            // Academic simplification: compare password directly with matricule
+            if (loginRequest.getPassword() != null &&
+                    loginRequest.getPassword().equals(emp.getMatricule())) {
+                LoginResponse response = LoginResponse.builder()
+                        .id(emp.getId())
+                        .name(emp.getName())
+                        .role("employé")
+                        .build();
+                return ResponseEntity.ok(response);
+            }
+        }
+
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", "Invalid employee credentials");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
