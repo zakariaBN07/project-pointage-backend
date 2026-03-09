@@ -66,6 +66,7 @@ public class ProjectService {
                 .projectId(project.getId())
                 .affaireNumero(project.getAffaireNumero())
                 .name(project.getName())
+                .username(project.getUsername())
                 .superviseurIds(superviseurIds.stream().collect(Collectors.toList()))
                 .plannedHours(planned)
                 .consumedHours(consumed)

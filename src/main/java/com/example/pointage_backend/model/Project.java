@@ -23,6 +23,9 @@ public class Project {
     // human friendly name
     private String name;
 
+    // owner username
+    private String username;
+
     // planned total hours
     private BigDecimal plannedHours;
 

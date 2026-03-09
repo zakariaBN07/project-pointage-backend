@@ -13,6 +13,7 @@ public class ProjectMetricsDTO {
     private String projectId;
     private String affaireNumero;
     private String name;
+    private String username;
     private List<String> superviseurIds;
 
     private BigDecimal plannedHours;
