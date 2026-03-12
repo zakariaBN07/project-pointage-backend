@@ -45,6 +45,7 @@ public class Employee {
     private Double nbrJrsRecuperation;
     private Double nbrJrsMaladie;
     private String chantierAtelier;
+    private Integer projectProgress;
 
     /**
      * Calculate hours worked from actual attendance data (pointageEntree and pointageSortie).

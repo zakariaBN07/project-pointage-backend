@@ -19,7 +19,7 @@ public class SupervisorController {
 
     @GetMapping("/employees")
     public List<EmployeeDTO> listEmployees(
-            @RequestParam(required = false) String supervisorId
+            @RequestParam(name = "supervisorId", required = false) String supervisorId
     ) {
         return employeeService.getEmployeesByFilter(supervisorId, null);
     }

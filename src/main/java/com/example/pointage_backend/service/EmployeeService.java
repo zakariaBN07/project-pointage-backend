@@ -29,18 +29,19 @@ public class EmployeeService {
     // SAVE / UPDATE
     public EmployeeDTO saveEmployee(EmployeeDTO dto) {
 
-        // If an affaireNumero (project number) was provided, ensure a Project exists and link it
+        // If an affaireNumero (project number) was provided, ensure a Project exists
+        // and link it
         String projectId = null;
         if (dto.getAffaireNumero() != null && !dto.getAffaireNumero().isEmpty()) {
             Project project = projectRepository.findByAffaireNumero(dto.getAffaireNumero())
-                .orElseGet(() -> {
-                Project p = Project.builder()
-                    .affaireNumero(dto.getAffaireNumero())
-                    .name(dto.getAffaireNumero())
-                    .plannedHours(null)
-                    .build();
-                return projectRepository.save(p);
-                });
+                    .orElseGet(() -> {
+                        Project p = Project.builder()
+                                .affaireNumero(dto.getAffaireNumero())
+                                .name(dto.getAffaireNumero())
+                                .plannedHours(null)
+                                .build();
+                        return projectRepository.save(p);
+                    });
             projectId = project.getId();
         }
 
@@ -48,8 +49,8 @@ public class EmployeeService {
                 .id(dto.getId())
                 .name(dto.getName())
                 .matricule(dto.getMatricule())
-            .affaireNumero(dto.getAffaireNumero())
-            .projectId(projectId)
+                .affaireNumero(dto.getAffaireNumero())
+                .projectId(projectId)
                 .client(dto.getClient())
                 .site(dto.getSite())
                 .plannedHours(dto.getPlannedHours())
@@ -72,6 +73,7 @@ public class EmployeeService {
                 .nbrJrsRecuperation(dto.getNbrJrsRecuperation())
                 .nbrJrsMaladie(dto.getNbrJrsMaladie())
                 .chantierAtelier(dto.getChantierAtelier())
+                .projectProgress(dto.getProjectProgress())
                 .build();
 
         Employee saved = employeeRepository.save(employee);
@@ -148,6 +150,7 @@ public class EmployeeService {
                 .nbrJrsRecuperation(employee.getNbrJrsRecuperation())
                 .nbrJrsMaladie(employee.getNbrJrsMaladie())
                 .chantierAtelier(employee.getChantierAtelier())
+                .projectProgress(employee.getProjectProgress())
                 .build();
     }
 }

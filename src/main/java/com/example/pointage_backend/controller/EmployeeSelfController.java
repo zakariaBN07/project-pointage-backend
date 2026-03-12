@@ -21,7 +21,7 @@ public class EmployeeSelfController {
      * based on matricule (identifier entered at login).
      */
     @GetMapping("/me")
-    public List<EmployeeDTO> getMyPointage(@RequestParam String matricule) {
+    public List<EmployeeDTO> getMyPointage(@RequestParam(name = "matricule") String matricule) {
         return employeeService.getEmployeesByMatricule(matricule);
     }
 

@@ -54,4 +54,5 @@ public class EmployeeDTO {
     private Double nbrJrsMaladie;
 
     private String chantierAtelier;
+    private Integer projectProgress;
 }
