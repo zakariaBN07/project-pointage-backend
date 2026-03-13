@@ -24,13 +24,16 @@ public class ProjectService {
 
     public ProjectMetricsDTO getMetricsForProject(String projectId) {
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+                .orElseGet(() ->
+                        projectRepository.findFirstByAffaireNumero(projectId)
+                                .orElseThrow(() -> new IllegalArgumentException("Project not found"))
+                );
 
         // Planned hours
         BigDecimal planned = project.getPlannedHours() == null ? BigDecimal.ZERO : project.getPlannedHours();
 
         // Consumed hours: compute from Employee attendance data (not from cached totals)
-        List<Employee> employees = employeeRepository.findByProjectId(projectId);
+        List<Employee> employees = employeeRepository.findByProjectId(project.getId());
         BigDecimal consumed = employees.stream()
                 .mapToDouble(Employee::calculateHoursWorked)
                 .boxed()
@@ -42,7 +45,7 @@ public class ProjectService {
         if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
 
         // Progress percent: sum of weights of completed tasks
-        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        List<Task> tasks = taskRepository.findByProjectId(project.getId());
         BigDecimal progress = tasks.stream()
                 .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())

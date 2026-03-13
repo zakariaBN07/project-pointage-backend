@@ -26,7 +26,7 @@ public class TaskService {
         return projectRepository.findById(projectIdOrAffaire)
                 .orElseGet(() -> 
                     // Fallback to finding by AffaireNumero
-                    projectRepository.findByAffaireNumero(projectIdOrAffaire)
+                    projectRepository.findFirstByAffaireNumero(projectIdOrAffaire)
                             .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrAffaire))
                 );
     }
@@ -92,7 +92,11 @@ public class TaskService {
         List<Employee> employeesById = employeeRepository.findByProjectId(projectId);
         List<Employee> employeesByAffaire = affaireNumero == null
                 ? List.of()
-                : employeeRepository.findByAffaireNumero(affaireNumero);
+                : employeeRepository.findByAffaireNumero(affaireNumero).stream()
+                    // Only apply progress to employees actually linked to this project,
+                    // or those missing projectId (so we can link them).
+                    .filter(e -> e.getProjectId() == null || e.getProjectId().isEmpty() || projectId.equals(e.getProjectId()))
+                    .collect(Collectors.toList());
 
         // merge and deduplicate
         List<Employee> employees = new java.util.ArrayList<>();

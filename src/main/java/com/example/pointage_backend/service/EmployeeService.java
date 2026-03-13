@@ -8,7 +8,9 @@ import com.example.pointage_backend.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,27 +31,66 @@ public class EmployeeService {
     // SAVE / UPDATE
     public EmployeeDTO saveEmployee(EmployeeDTO dto) {
 
-        // If an affaireNumero (project number) was provided, ensure a Project exists
-        // and link it
-        String projectId = null;
-        if (dto.getAffaireNumero() != null && !dto.getAffaireNumero().isEmpty()) {
-            Project project = projectRepository.findByAffaireNumero(dto.getAffaireNumero())
-                    .orElseGet(() -> {
-                        Project p = Project.builder()
-                                .affaireNumero(dto.getAffaireNumero())
-                                .name(dto.getAffaireNumero())
-                                .plannedHours(null)
-                                .build();
-                        return projectRepository.save(p);
-                    });
-            projectId = project.getId();
+        Employee existing = null;
+        if (isNotBlank(dto.getId())) {
+            existing = employeeRepository.findById(dto.getId()).orElse(null);
+        }
+
+        String normalizedAffaireNumero = normalizeAffaireNumero(dto.getAffaireNumero());
+        if (dto.getAffaireNumero() == null && existing != null) {
+            normalizedAffaireNumero = normalizeAffaireNumero(existing.getAffaireNumero());
+        }
+
+        // Project linking strategy:
+        // 1) If client sent projectId, keep it (prevents accidental relinking when affaireNumero is duplicated)
+        // 2) Else, if we're updating and the employee already has a projectId and affaireNumero didn't change, keep it
+        // 3) Else, resolve by affaireNumero (create if missing)
+        String projectId = trimToNull(dto.getProjectId());
+        if (projectId == null && existing != null) {
+            String existingProjectId = trimToNull(existing.getProjectId());
+            String existingAffaireNumero = normalizeAffaireNumero(existing.getAffaireNumero());
+            if (existingProjectId != null && Objects.equals(existingAffaireNumero, normalizedAffaireNumero)) {
+                projectId = existingProjectId;
+            }
+        }
+
+        if (projectId == null && normalizedAffaireNumero != null) {
+            List<Project> matches = projectRepository.findByAffaireNumero(normalizedAffaireNumero);
+            if (matches.isEmpty()) {
+                Project p = Project.builder()
+                        .affaireNumero(normalizedAffaireNumero)
+                        .name(normalizedAffaireNumero)
+                        .plannedHours(null)
+                        .build();
+                projectId = projectRepository.save(p).getId();
+            } else if (matches.size() == 1) {
+                projectId = matches.get(0).getId();
+            } else if (existing != null && isNotBlank(existing.getProjectId())) {
+                // Prefer keeping the existing employee project if it is one of the matches
+                String existingProjectId = trimToNull(existing.getProjectId());
+                projectId = matches.stream()
+                        .map(Project::getId)
+                        .filter(id -> Objects.equals(id, existingProjectId))
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            if (projectId == null && !matches.isEmpty()) {
+                // deterministic fallback (still ambiguous, but prevents random "first" selection)
+                projectId = matches.stream()
+                        .filter(p -> isNotBlank(p.getId()))
+                        .sorted(Comparator.comparing(Project::getId))
+                        .map(Project::getId)
+                        .findFirst()
+                        .orElse(null);
+            }
         }
 
         Employee employee = Employee.builder()
                 .id(dto.getId())
                 .name(dto.getName())
                 .matricule(dto.getMatricule())
-                .affaireNumero(dto.getAffaireNumero())
+                .affaireNumero(normalizedAffaireNumero)
                 .projectId(projectId)
                 .client(dto.getClient())
                 .site(dto.getSite())
@@ -152,5 +193,23 @@ public class EmployeeService {
                 .chantierAtelier(employee.getChantierAtelier())
                 .projectProgress(employee.getProjectProgress())
                 .build();
+    }
+
+    private static boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeAffaireNumero(String value) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) return null;
+        // UI sometimes uses "-" as empty placeholder
+        if ("-".equals(trimmed)) return null;
+        return trimmed;
     }
 }
