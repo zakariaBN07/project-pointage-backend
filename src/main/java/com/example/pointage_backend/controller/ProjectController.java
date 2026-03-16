@@ -32,6 +32,11 @@ public class ProjectController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Project createProject(@RequestBody Project project) {
+        // Prevent duplicate projects with the same affaireNumero
+        if (project.getAffaireNumero() != null) {
+            return projectRepository.findFirstByAffaireNumero(project.getAffaireNumero())
+                    .orElseGet(() -> projectRepository.save(project));
+        }
         return projectRepository.save(project);
     }
 

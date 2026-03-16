@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class TaskCreateDTO {
-    private String projectId;
-    
+    private String id;
     private String name;
     private BigDecimal weightPercent;
-
+    private String status;
+    private Boolean completed;
 }

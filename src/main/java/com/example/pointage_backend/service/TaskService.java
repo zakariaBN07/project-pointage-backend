@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,15 +25,23 @@ public class TaskService {
     private Project findProjectByIdOrAffaire(String projectIdOrAffaire) {
         // Try finding by ID first
         return projectRepository.findById(projectIdOrAffaire)
-                .orElseGet(() -> 
-                    // Fallback to finding by AffaireNumero
-                    projectRepository.findFirstByAffaireNumero(projectIdOrAffaire)
-                            .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrAffaire))
-                );
+                .map(p -> {
+                    // Even if found by ID, if it has an affaireNumero, try to get the "first" one
+                    // to ensure tasks are always attached to the primary record.
+                    if (p.getAffaireNumero() != null) {
+                        return projectRepository.findFirstByAffaireNumero(p.getAffaireNumero()).orElse(p);
+                    }
+                    return p;
+                })
+                .orElseGet(() ->
+                // Fallback to finding by AffaireNumero
+                projectRepository.findFirstByAffaireNumero(projectIdOrAffaire)
+                        .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrAffaire)));
     }
 
     public List<Task> getTasksForProject(String projectIdOrAffaire) {
-        // Ensure project exists before listing tasks to avoid returning tasks for deleted projects
+        // Ensure project exists before listing tasks to avoid returning tasks for
+        // deleted projects
         Project project = findProjectByIdOrAffaire(projectIdOrAffaire);
         return taskRepository.findByProjectId(project.getId());
     }
@@ -40,30 +49,48 @@ public class TaskService {
     public List<Task> createTasksForProject(String projectIdOrAffaire, List<TaskCreateDTO> tasks) {
         // validate project exists
         Project project = findProjectByIdOrAffaire(projectIdOrAffaire);
+        String projectId = project.getId();
 
-        // sum weights 
+        // 1. Validate weights
         BigDecimal sum = tasks.stream()
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Allow a tiny margin for floating point errors (e.g. 100.0000001)
         if (sum.setScale(2, java.math.RoundingMode.HALF_UP).compareTo(new BigDecimal("100.00")) > 0) {
             throw new IllegalArgumentException("Sum of task weights cannot exceed 100%. Current sum: " + sum);
         }
 
-        // Delete existing tasks to replace them with the new set
-        taskRepository.deleteByProjectId(project.getId());
+        List<Task> existingTasks = taskRepository.findByProjectId(projectId);
 
-        List<Task> toSave = tasks.stream().map(t -> Task.builder()
-                .projectId(project.getId()) 
-                .name(t.getName())
-                .weightPercent(t.getWeightPercent())
-                .status("PENDING")
-                .completed(false)
-                .build()).collect(Collectors.toList());
+        // 4. Update existing or create new
+        List<Task> toSave = tasks.stream().map(dto -> {
+            Task task;
+            if (dto.getId() != null && !dto.getId().isEmpty()) {
+                // Find existing
+                task = existingTasks.stream()
+                        .filter(ext -> ext.getId().equals(dto.getId()))
+                        .findFirst()
+                        .orElse(new Task());
+            } else {
+                task = new Task();
+                task.setCompleted(false);
+                task.setStatus("PENDING");
+            }
+
+            task.setProjectId(projectId);
+            task.setName(dto.getName());
+            task.setWeightPercent(dto.getWeightPercent());
+
+            if (dto.getStatus() != null)
+                task.setStatus(dto.getStatus());
+            if (dto.getCompleted() != null)
+                task.setCompleted(dto.getCompleted());
+
+            return task;
+        }).collect(Collectors.toList());
 
         List<Task> saved = taskRepository.saveAll(toSave);
-        updateEmployeesProjectProgress(project.getId());
+        updateEmployeesProjectProgress(projectId);
         return saved;
     }
 
@@ -98,7 +125,8 @@ public class TaskService {
 
         int progressInt = progress.intValue();
 
-        // fetch project to retrieve affaireNumero and re-link employees missing projectId
+        // fetch project to retrieve affaireNumero and re-link employees missing
+        // projectId
         Project project = projectRepository.findById(projectId)
                 .orElse(null);
         String affaireNumero = project != null ? project.getAffaireNumero() : null;
@@ -107,10 +135,11 @@ public class TaskService {
         List<Employee> employeesByAffaire = affaireNumero == null
                 ? List.of()
                 : employeeRepository.findByAffaireNumero(affaireNumero).stream()
-                    // Only apply progress to employees actually linked to this project,
-                    // or those missing projectId (so we can link them).
-                    .filter(e -> e.getProjectId() == null || e.getProjectId().isEmpty() || projectId.equals(e.getProjectId()))
-                    .collect(Collectors.toList());
+                        // Only apply progress to employees actually linked to this project,
+                        // or those missing projectId (so we can link them).
+                        .filter(e -> e.getProjectId() == null || e.getProjectId().isEmpty()
+                                || projectId.equals(e.getProjectId()))
+                        .collect(Collectors.toList());
 
         // merge and deduplicate
         List<Employee> employees = new java.util.ArrayList<>();

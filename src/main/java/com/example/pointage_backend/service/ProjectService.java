@@ -22,18 +22,21 @@ public class ProjectService {
     private final TaskRepository taskRepository;
     private final EmployeeRepository employeeRepository;
 
-    public ProjectMetricsDTO getMetricsForProject(String projectId) {
-        Project project = projectRepository.findById(projectId)
-                .orElseGet(() ->
-                        projectRepository.findFirstByAffaireNumero(projectId)
-                                .orElseThrow(() -> new IllegalArgumentException("Project not found"))
-                );
+    public ProjectMetricsDTO getMetricsForProject(String inputId) {
+        // 1. Try finding by ID or Affaire
+        Project project = projectRepository.findById(inputId)
+                .orElseGet(() -> projectRepository.findFirstByAffaireNumero(inputId)
+                        .orElseThrow(() -> new IllegalArgumentException("Project not found: " + inputId)));
 
-        // Planned hours
+        // 2. Canonicalization: Always use the first record created for this affaireNumero
+        if (project.getAffaireNumero() != null) {
+            project = projectRepository.findFirstByAffaireNumero(project.getAffaireNumero()).orElse(project);
+        }
 
+        final String canonicalId = project.getId(); // Use a final variable for the ID
 
         // Consumed hours: compute from Employee attendance data
-        List<Employee> employeesById = employeeRepository.findByProjectId(project.getId());
+        List<Employee> employeesById = employeeRepository.findByProjectId(canonicalId);
         List<Employee> employeesByAffaire = project.getAffaireNumero() != null 
                 ? employeeRepository.findByAffaireNumero(project.getAffaireNumero())
                 : java.util.Collections.emptyList();
@@ -45,7 +48,6 @@ public class ProjectService {
             if (seenIds.add(e.getId())) employees.add(e);
         }
         for (Employee e : employeesByAffaire) {
-            // Greedy match: include if associated with this project's affaire number
             if (seenIds.add(e.getId())) {
                 employees.add(e);
             }
@@ -58,9 +60,7 @@ public class ProjectService {
                 try {
                     String raw = e.getPlannedHours();
                     if (raw != null && !raw.isEmpty()) {
-                        // Extract digits and decimal separators (handles "200.00 h", "200,00", etc.)
-                        String cleaned = raw.replaceAll("[^0-9,. ]", "").trim();
-                        cleaned = cleaned.replace(" ", "").replace(",", ".");
+                        String cleaned = raw.replaceAll("[^0-9,. ]", "").trim().replace(" ", "").replace(",", ".");
                         if (!cleaned.isEmpty()) {
                             BigDecimal empPlanned = new BigDecimal(cleaned);
                             if (empPlanned.compareTo(BigDecimal.ZERO) > 0) {
@@ -76,7 +76,7 @@ public class ProjectService {
         BigDecimal consumed = employees.stream()
                 .mapToDouble(Employee::calculateHoursWorked)
                 .boxed()
-                .map(hours -> BigDecimal.valueOf(hours))
+                .map(BigDecimal::valueOf)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Remaining
@@ -84,7 +84,7 @@ public class ProjectService {
         if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
 
         // Progress percent: sum of weights of completed tasks
-        List<Task> tasks = taskRepository.findByProjectId(project.getId());
+        List<Task> tasks = taskRepository.findByProjectId(canonicalId);
         BigDecimal progress = tasks.stream()
                 .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
@@ -98,13 +98,11 @@ public class ProjectService {
 
         boolean alert = timePercent.compareTo(progress) > 0;
 
-        // gather superviseurIds from employees assigned to project
         Set<String> superviseurIds = employees.stream()
                 .map(Employee::getSupervisorId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
 
-        // Username fallback (Client name)
         String username = project.getUsername();
         if ((username == null || username.isEmpty()) && !employees.isEmpty()) {
             username = employees.stream()
@@ -115,7 +113,7 @@ public class ProjectService {
         }
 
         return ProjectMetricsDTO.builder()
-                .projectId(project.getId())
+                .projectId(canonicalId)
                 .affaireNumero(project.getAffaireNumero())
                 .name(project.getName())
                 .username(username != null ? username : "Client Inconnu")
@@ -125,12 +123,21 @@ public class ProjectService {
                 .remainingHours(remaining)
                 .progressPercent(progress)
                 .timePercent(timePercent)
+                .isMonitored(true)
                 .timeExceedsProgress(alert)
                 .build();
     }
 
     public List<ProjectMetricsDTO> listAllProjectsWithMetrics() {
-        return projectRepository.findAll().stream()
+        List<Project> allProjects = projectRepository.findAll();
+        java.util.Map<String, Project> uniqueProjects = new java.util.HashMap<>();
+        
+        for (Project p : allProjects) {
+            String key = p.getAffaireNumero() != null ? p.getAffaireNumero() : p.getId();
+            uniqueProjects.putIfAbsent(key, p);
+        }
+
+        return uniqueProjects.values().stream()
                 .map(p -> getMetricsForProject(p.getId()))
                 .collect(Collectors.toList());
     }

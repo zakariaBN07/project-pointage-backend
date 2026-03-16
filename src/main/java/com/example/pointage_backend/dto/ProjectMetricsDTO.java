@@ -24,5 +24,6 @@ public class ProjectMetricsDTO {
     private BigDecimal progressPercent;
     private BigDecimal timePercent;
 
+    private boolean isMonitored;
     private boolean timeExceedsProgress;
 }
