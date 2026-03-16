@@ -30,7 +30,7 @@ public class EmployeeSelfController {
      * using the same DTO mapping logic as supervisor/responsable flows.
      */
     @PutMapping("/me/{id}")
-    public EmployeeDTO updateMyPointage(@PathVariable String id, @Valid @RequestBody EmployeeDTO dto) {
+    public EmployeeDTO updateMyPointage(@PathVariable("id") String id, @Valid @RequestBody EmployeeDTO dto) {
         dto.setId(id);
         return employeeService.saveEmployee(dto);
     }

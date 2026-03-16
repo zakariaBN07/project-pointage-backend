@@ -31,7 +31,7 @@ public class SupervisorController {
 
     @PutMapping("/employees/{id}")
     public EmployeeDTO updateEmployee(
-            @PathVariable String id,
+            @PathVariable("id") String id,
             @Valid @RequestBody EmployeeDTO dto
     ) {
         dto.setId(id);
@@ -40,7 +40,7 @@ public class SupervisorController {
 
     @DeleteMapping("/employees/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteEmployee(@PathVariable String id) {
+    public void deleteEmployee(@PathVariable("id") String id) {
         employeeService.deleteEmployee(id);
     }
 }

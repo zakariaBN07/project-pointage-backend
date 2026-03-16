@@ -25,7 +25,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}/metrics")
-    public ProjectMetricsDTO getMetrics(@PathVariable String id) {
+    public ProjectMetricsDTO getMetrics(@PathVariable("id") String id) {
         return projectService.getMetricsForProject(id);
     }
 
@@ -36,14 +36,14 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    public Project updateProject(@PathVariable String id, @RequestBody Project project) {
+    public Project updateProject(@PathVariable("id") String id, @RequestBody Project project) {
         project.setId(id);
         return projectRepository.save(project);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteProject(@PathVariable String id) {
+    public void deleteProject(@PathVariable("id") String id) {
         projectRepository.deleteById(id);
     }
 }

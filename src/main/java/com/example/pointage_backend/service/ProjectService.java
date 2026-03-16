@@ -30,10 +30,49 @@ public class ProjectService {
                 );
 
         // Planned hours
-        BigDecimal planned = project.getPlannedHours() == null ? BigDecimal.ZERO : project.getPlannedHours();
 
-        // Consumed hours: compute from Employee attendance data (not from cached totals)
-        List<Employee> employees = employeeRepository.findByProjectId(project.getId());
+
+        // Consumed hours: compute from Employee attendance data
+        List<Employee> employeesById = employeeRepository.findByProjectId(project.getId());
+        List<Employee> employeesByAffaire = project.getAffaireNumero() != null 
+                ? employeeRepository.findByAffaireNumero(project.getAffaireNumero())
+                : java.util.Collections.emptyList();
+
+        // Merge and deduplicate
+        java.util.Set<String> seenIds = new java.util.HashSet<>();
+        List<Employee> employees = new java.util.ArrayList<>();
+        for (Employee e : employeesById) {
+            if (seenIds.add(e.getId())) employees.add(e);
+        }
+        for (Employee e : employeesByAffaire) {
+            // Greedy match: include if associated with this project's affaire number
+            if (seenIds.add(e.getId())) {
+                employees.add(e);
+            }
+        }
+
+        // Planned hours: use project record, but fallback to employee data if project is 0
+        BigDecimal planned = project.getPlannedHours() == null ? BigDecimal.ZERO : project.getPlannedHours();
+        if (planned.compareTo(BigDecimal.ZERO) == 0 && !employees.isEmpty()) {
+            for (Employee e : employees) {
+                try {
+                    String raw = e.getPlannedHours();
+                    if (raw != null && !raw.isEmpty()) {
+                        // Extract digits and decimal separators (handles "200.00 h", "200,00", etc.)
+                        String cleaned = raw.replaceAll("[^0-9,. ]", "").trim();
+                        cleaned = cleaned.replace(" ", "").replace(",", ".");
+                        if (!cleaned.isEmpty()) {
+                            BigDecimal empPlanned = new BigDecimal(cleaned);
+                            if (empPlanned.compareTo(BigDecimal.ZERO) > 0) {
+                                planned = empPlanned;
+                                break; 
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
         BigDecimal consumed = employees.stream()
                 .mapToDouble(Employee::calculateHoursWorked)
                 .boxed()
@@ -54,7 +93,7 @@ public class ProjectService {
         // Time percent
         BigDecimal timePercent = BigDecimal.ZERO;
         if (planned.compareTo(BigDecimal.ZERO) > 0) {
-            timePercent = consumed.multiply(new BigDecimal("100")).divide(planned, 2, BigDecimal.ROUND_HALF_UP);
+            timePercent = consumed.multiply(new BigDecimal("100")).divide(planned, 2, java.math.RoundingMode.HALF_UP);
         }
 
         boolean alert = timePercent.compareTo(progress) > 0;
@@ -65,11 +104,21 @@ public class ProjectService {
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
 
+        // Username fallback (Client name)
+        String username = project.getUsername();
+        if ((username == null || username.isEmpty()) && !employees.isEmpty()) {
+            username = employees.stream()
+                    .map(Employee::getClient)
+                    .filter(c -> c != null && !c.isEmpty())
+                    .findFirst()
+                    .orElse(null);
+        }
+
         return ProjectMetricsDTO.builder()
                 .projectId(project.getId())
                 .affaireNumero(project.getAffaireNumero())
                 .name(project.getName())
-                .username(project.getUsername())
+                .username(username != null ? username : "Client Inconnu")
                 .superviseurIds(superviseurIds.stream().collect(Collectors.toList()))
                 .plannedHours(planned)
                 .consumedHours(consumed)

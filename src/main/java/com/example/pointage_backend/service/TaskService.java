@@ -41,18 +41,21 @@ public class TaskService {
         // validate project exists
         Project project = findProjectByIdOrAffaire(projectIdOrAffaire);
 
-        // sum weights (optional: could add a check to ensure it doesn't exceed 100 if desired, 
-        // but the user specifically asked to allow adding even if it's not 100)
+        // sum weights 
         BigDecimal sum = tasks.stream()
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (sum.compareTo(new BigDecimal("100")) > 0) {
-            throw new IllegalArgumentException("Sum of task weights cannot exceed 100. Current sum: " + sum);
+        // Allow a tiny margin for floating point errors (e.g. 100.0000001)
+        if (sum.setScale(2, java.math.RoundingMode.HALF_UP).compareTo(new BigDecimal("100.00")) > 0) {
+            throw new IllegalArgumentException("Sum of task weights cannot exceed 100%. Current sum: " + sum);
         }
 
+        // Delete existing tasks to replace them with the new set
+        taskRepository.deleteByProjectId(project.getId());
+
         List<Task> toSave = tasks.stream().map(t -> Task.builder()
-                .projectId(project.getId()) // Use the resolved Project ID (ObjectId)
+                .projectId(project.getId()) 
                 .name(t.getName())
                 .weightPercent(t.getWeightPercent())
                 .status("PENDING")
@@ -70,6 +73,17 @@ public class TaskService {
         task.setCompleted(true);
         task.setStatus("COMPLETED");
         task.setCompletedAt(java.time.LocalDateTime.now());
+        Task saved = taskRepository.save(task);
+        updateEmployeesProjectProgress(task.getProjectId());
+        return saved;
+    }
+
+    public Task uncompleteTask(String taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+        task.setCompleted(false);
+        task.setStatus("PENDING");
+        task.setCompletedAt(null);
         Task saved = taskRepository.save(task);
         updateEmployeesProjectProgress(task.getProjectId());
         return saved;

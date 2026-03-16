@@ -18,20 +18,25 @@ public class TaskController {
 
     // List all tasks for a given project
     @GetMapping("/{projectId}/tasks")
-    public List<Task> listTasks(@PathVariable String projectId) {
+    public List<Task> listTasks(@PathVariable("projectId") String projectId) {
         return taskService.getTasksForProject(projectId);
     }
 
     // Create tasks for a project (validate sum of weights == 100)
     @PostMapping("/{projectId}/tasks")
     @ResponseStatus(HttpStatus.CREATED)
-    public List<Task> createTasks(@PathVariable String projectId, @RequestBody List<TaskCreateDTO> tasks) {
+    public List<Task> createTasks(@PathVariable("projectId") String projectId, @RequestBody List<TaskCreateDTO> tasks) {
         return taskService.createTasksForProject(projectId, tasks);
     }
 
     // Superviseur marks a task complete
     @PostMapping("/tasks/{taskId}/complete")
-    public Task completeTask(@PathVariable String taskId, @RequestParam(required = false) String superviseurId) {
+    public Task completeTask(@PathVariable("taskId") String taskId, @RequestParam(name = "superviseurId", required = false) String superviseurId) {
         return taskService.completeTask(taskId, superviseurId);
+    }
+
+    @PostMapping("/tasks/{taskId}/uncomplete")
+    public Task uncompleteTask(@PathVariable("taskId") String taskId) {
+        return taskService.uncompleteTask(taskId);
     }
 }
