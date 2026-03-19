@@ -22,36 +22,27 @@ public class TaskService {
     private final ProjectRepository projectRepository;
     private final EmployeeRepository employeeRepository;
 
-    private Project findProjectByIdOrAffaire(String projectIdOrAffaire) {
-        // Try finding by ID first
-        return projectRepository.findById(projectIdOrAffaire)
-                .map(p -> {
-                    // Even if found by ID, if it has an affaireNumero, try to get the "first" one
-                    // to ensure tasks are always attached to the primary record.
-                    if (p.getAffaireNumero() != null) {
-                        return projectRepository.findFirstByAffaireNumero(p.getAffaireNumero()).orElse(p);
-                    }
-                    return p;
-                })
-                .orElseGet(() ->
-                // Fallback to finding by AffaireNumero
-                projectRepository.findFirstByAffaireNumero(projectIdOrAffaire)
-                        .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrAffaire)));
+    private Project findProjectByIdOrCodeAffaire(String projectIdOrCodeAffaire) {
+        try {
+            Long id = Long.valueOf(projectIdOrCodeAffaire);
+            return projectRepository.findById(id)
+                    .orElseGet(() -> projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
+                            .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrCodeAffaire)));
+        } catch (NumberFormatException e) {
+            return projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
+                    .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrCodeAffaire));
+        }
     }
 
-    public List<Task> getTasksForProject(String projectIdOrAffaire) {
-        // Ensure project exists before listing tasks to avoid returning tasks for
-        // deleted projects
-        Project project = findProjectByIdOrAffaire(projectIdOrAffaire);
+    public List<Task> getTasksForProject(String projectIdOrCodeAffaire) {
+        Project project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
         return taskRepository.findByProjectId(project.getId());
     }
 
-    public List<Task> createTasksForProject(String projectIdOrAffaire, List<TaskCreateDTO> tasks) {
-        // validate project exists
-        Project project = findProjectByIdOrAffaire(projectIdOrAffaire);
-        String projectId = project.getId();
+    public List<Task> createTasksForProject(String projectIdOrCodeAffaire, List<TaskCreateDTO> tasks) {
+        Project project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
+        Long projectId = project.getId();
 
-        // 1. Validate weights
         BigDecimal sum = tasks.stream()
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -62,11 +53,9 @@ public class TaskService {
 
         List<Task> existingTasks = taskRepository.findByProjectId(projectId);
 
-        // 4. Update existing or create new
         List<Task> toSave = tasks.stream().map(dto -> {
             Task task;
-            if (dto.getId() != null && !dto.getId().isEmpty()) {
-                // Find existing
+            if (dto.getId() != null) {
                 task = existingTasks.stream()
                         .filter(ext -> ext.getId().equals(dto.getId()))
                         .findFirst()
@@ -94,7 +83,7 @@ public class TaskService {
         return saved;
     }
 
-    public Task completeTask(String taskId, String superviseurId) {
+    public Task completeTask(Long taskId, String superviseurId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         task.setCompleted(true);
@@ -105,7 +94,7 @@ public class TaskService {
         return saved;
     }
 
-    public Task uncompleteTask(String taskId) {
+    public Task uncompleteTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         task.setCompleted(false);
@@ -116,7 +105,7 @@ public class TaskService {
         return saved;
     }
 
-    private void updateEmployeesProjectProgress(String projectId) {
+    private void updateEmployeesProjectProgress(Long projectId) {
         List<Task> tasks = taskRepository.findByProjectId(projectId);
         BigDecimal progress = tasks.stream()
                 .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
@@ -125,25 +114,19 @@ public class TaskService {
 
         int progressInt = progress.intValue();
 
-        // fetch project to retrieve affaireNumero and re-link employees missing
-        // projectId
         Project project = projectRepository.findById(projectId)
                 .orElse(null);
-        String affaireNumero = project != null ? project.getAffaireNumero() : null;
+        String codeAffaire = project != null ? project.getCodeAffaire() : null;
 
         List<Employee> employeesById = employeeRepository.findByProjectId(projectId);
-        List<Employee> employeesByAffaire = affaireNumero == null
+        List<Employee> employeesByAffaire = codeAffaire == null
                 ? List.of()
-                : employeeRepository.findByAffaireNumero(affaireNumero).stream()
-                        // Only apply progress to employees actually linked to this project,
-                        // or those missing projectId (so we can link them).
-                        .filter(e -> e.getProjectId() == null || e.getProjectId().isEmpty()
-                                || projectId.equals(e.getProjectId()))
+                : employeeRepository.findByAffaireNumero(codeAffaire).stream()
+                        .filter(e -> e.getProjectId() == null || projectId.equals(e.getProjectId()))
                         .collect(Collectors.toList());
 
-        // merge and deduplicate
         List<Employee> employees = new java.util.ArrayList<>();
-        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
         for (Employee e : employeesById) {
             if (seen.add(e.getId())) {
                 employees.add(e);
@@ -156,8 +139,7 @@ public class TaskService {
         }
 
         for (Employee emp : employees) {
-            // ensure projectId is linked for future lookups
-            if (emp.getProjectId() == null || emp.getProjectId().isEmpty()) {
+            if (emp.getProjectId() == null) {
                 emp.setProjectId(projectId);
             }
             emp.setProjectProgress(progressInt);

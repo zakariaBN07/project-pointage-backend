@@ -18,11 +18,11 @@ public class EmployeeSelfController {
 
     /**
      * Simple endpoint for the employee UI to retrieve its own pointage data
-     * based on matricule (identifier entered at login).
+     * based on email (identifier entered at login).
      */
     @GetMapping("/me")
-    public List<EmployeeDTO> getMyPointage(@RequestParam(name = "matricule") String matricule) {
-        return employeeService.getEmployeesByMatricule(matricule);
+    public List<EmployeeDTO> getMyPointage(@RequestParam(name = "email") String email) {
+        return employeeService.getEmployeesByEmail(email);
     }
 
     /**
@@ -30,7 +30,7 @@ public class EmployeeSelfController {
      * using the same DTO mapping logic as supervisor/responsable flows.
      */
     @PutMapping("/me/{id}")
-    public EmployeeDTO updateMyPointage(@PathVariable("id") String id, @Valid @RequestBody EmployeeDTO dto) {
+    public EmployeeDTO updateMyPointage(@PathVariable("id") Long id, @Valid @RequestBody EmployeeDTO dto) {
         dto.setId(id);
         return employeeService.saveEmployee(dto);
     }

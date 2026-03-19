@@ -24,31 +24,37 @@ public class ProjectController {
         return projectService.listAllProjectsWithMetrics();
     }
 
+    @GetMapping("/{id}")
+    public Project getProject(@PathVariable("id") Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
     @GetMapping("/{id}/metrics")
-    public ProjectMetricsDTO getMetrics(@PathVariable("id") String id) {
+    public ProjectMetricsDTO getMetrics(@PathVariable("id") Long id) {
         return projectService.getMetricsForProject(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Project createProject(@RequestBody Project project) {
-        // Prevent duplicate projects with the same affaireNumero
-        if (project.getAffaireNumero() != null) {
-            return projectRepository.findFirstByAffaireNumero(project.getAffaireNumero())
+        // Prevent duplicate projects with the same codeAffaire
+        if (project.getCodeAffaire() != null) {
+            return projectRepository.findByCodeAffaire(project.getCodeAffaire())
                     .orElseGet(() -> projectRepository.save(project));
         }
         return projectRepository.save(project);
     }
 
     @PutMapping("/{id}")
-    public Project updateProject(@PathVariable("id") String id, @RequestBody Project project) {
+    public Project updateProject(@PathVariable("id") Long id, @RequestBody Project project) {
         project.setId(id);
         return projectRepository.save(project);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteProject(@PathVariable("id") String id) {
+    public void deleteProject(@PathVariable("id") Long id) {
         projectRepository.deleteById(id);
     }
 }

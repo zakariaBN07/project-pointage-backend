@@ -1,21 +1,21 @@
 package com.example.pointage_backend.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
-@Document(collection = "supervisors")
+@Entity
+@Table(name = "supervisors")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Supervisor {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     private String name;
     
-    @Indexed(unique = true)
+    @Column(unique = true)
     private String username;
 }

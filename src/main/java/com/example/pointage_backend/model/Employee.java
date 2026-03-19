@@ -1,51 +1,61 @@
 package com.example.pointage_backend.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "employees")
+@Entity
+@Table(name = "employees")
 public class Employee {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private String name;
+    private String nom;
+    private String prenom;
     private String matricule;
+    private String email;
+    private String post;
+    private String departement;
+    private Double tauxHoraire;
+    private String deviseTaux;
+    private Boolean actif;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
+
     private String affaireNumero;
-    private String projectId;
+    private String chantierAtelier;
     private String client;
-    private String site;
-    private String plannedHours;
+    private String name; 
 
-    // ✅ pointage fields
-    private String status;           // En attente | Présent | Absent | Sortie
-    private String pointageEntree;   // HH:mm:ss
-    private String pointageSortie;   // HH:mm:ss
-
-    private String supervisorId;     
-    private String responsableId;   
-
-    // Attendance fields
-    private Double totHrsTravaillees;
-    private Double nbrJrsTravaillees;
     private Double nbrJrsAbsence;
-    private Double totHrsDimanche;
+    private Double nbrJrsConges;
+    private Double nbrJrsDeplacementsExpatrie;
+    private Double nbrJrsDeplacementsMaroc;
+    private Double nbrJrsDetente;
     private Double nbrJrsFeries;
     private Double nbrJrsFeriesTravailes;
-    private Double nbrJrsConges;
-    private Double nbrJrsDeplacementsMaroc;
-    private Double nbrJrsPaniers;
-    private Double nbrJrsDetente;
-    private Double nbrJrsDeplacementsExpatrie;
-    private Double nbrJrsRecuperation;
     private Double nbrJrsMaladie;
-    private String chantierAtelier;
+    private Double nbrJrsPaniers;
+    private Double nbrJrsRecuperation;
+    private Double nbrJrsTravaillees;
+    private Double totHrsDimanche;
+    private Double totHrsTravaillees;
+
+    private String plannedHours;
+    private String pointageEntree;
+    private String pointageSortie;
+    private Long projectId;
     private Integer projectProgress;
+    private Long responsableId;
+    private String site;
+    private String status;
+    private Long supervisorId;
 
     /**
      * Calculate hours worked from actual attendance data (pointageEntree and pointageSortie).

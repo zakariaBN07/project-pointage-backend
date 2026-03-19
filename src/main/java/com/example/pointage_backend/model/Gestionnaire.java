@@ -1,17 +1,18 @@
 package com.example.pointage_backend.model;
 
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 
-@Document(collection = "gestionnaires")
+@Entity
+@Table(name = "gestionnaires")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Gestionnaire {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     private String name;
 

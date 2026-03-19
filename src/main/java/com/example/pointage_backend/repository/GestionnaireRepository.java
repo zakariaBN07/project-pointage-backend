@@ -1,9 +1,9 @@
 package com.example.pointage_backend.repository;
 
 import com.example.pointage_backend.model.Gestionnaire;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
-public interface GestionnaireRepository extends MongoRepository<Gestionnaire, String> {
-    Optional<Gestionnaire> findByName(String name);
+public interface GestionnaireRepository extends JpaRepository<Gestionnaire, Long> {
+    Optional<Gestionnaire> findByName(String string);
 }

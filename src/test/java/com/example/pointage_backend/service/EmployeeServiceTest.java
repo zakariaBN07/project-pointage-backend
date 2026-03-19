@@ -36,23 +36,23 @@ class EmployeeServiceTest {
     @Test
     void saveEmployee_keepsProvidedProjectId_evenWhenAffaireNumeroDuplicated() {
         Employee existing = Employee.builder()
-                .id("e1")
+                .id(1L)
                 .name("Alice")
-                .matricule("M1")
+                .email("alice@test.com")
                 .affaireNumero("A-100")
-                .projectId("p2")
-                .supervisorId("s1")
+                .projectId(2L)
+                .supervisorId(1L)
                 .build();
 
-        when(employeeRepository.findById("e1")).thenReturn(Optional.of(existing));
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> inv.getArgument(0));
 
         EmployeeDTO dto = EmployeeDTO.builder()
-                .id("e1")
+                .id(1L)
                 .name("Alice")
-                .matricule("M1")
+                .email("alice@test.com")
                 .affaireNumero("A-100")
-                .projectId("p2")
+                .projectId(2L)
                 .supervisorId(null)
                 .build();
 
@@ -61,32 +61,32 @@ class EmployeeServiceTest {
         verify(employeeRepository).save(employeeCaptor.capture());
         verifyNoInteractions(projectRepository);
 
-        assertThat(employeeCaptor.getValue().getProjectId()).isEqualTo("p2");
-        assertThat(saved.getProjectId()).isEqualTo("p2");
+        assertThat(employeeCaptor.getValue().getProjectId()).isEqualTo(2L);
+        assertThat(saved.getProjectId()).isEqualTo(2L);
         assertThat(saved.getSupervisorId()).isNull();
     }
 
     @Test
     void saveEmployee_whenAffaireNumeroMissing_preservesExistingAffaireAndProjectLink() {
         Employee existing = Employee.builder()
-                .id("e1")
+                .id(1L)
                 .name("Alice")
-                .matricule("M1")
+                .email("alice@test.com")
                 .affaireNumero("A-100")
-                .projectId("p2")
-                .supervisorId("s1")
+                .projectId(2L)
+                .supervisorId(1L)
                 .build();
 
-        when(employeeRepository.findById("e1")).thenReturn(Optional.of(existing));
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> inv.getArgument(0));
 
         EmployeeDTO dto = EmployeeDTO.builder()
-                .id("e1")
+                .id(1L)
                 .name("Alice")
-                .matricule("M1")
+                .email("alice@test.com")
                 // affaireNumero omitted (null) on purpose
                 .projectId(null)
-                .supervisorId("s1")
+                .supervisorId(1L)
                 .build();
 
         EmployeeDTO saved = employeeService.saveEmployee(dto);
@@ -95,9 +95,9 @@ class EmployeeServiceTest {
         verifyNoInteractions(projectRepository);
 
         assertThat(employeeCaptor.getValue().getAffaireNumero()).isEqualTo("A-100");
-        assertThat(employeeCaptor.getValue().getProjectId()).isEqualTo("p2");
+        assertThat(employeeCaptor.getValue().getProjectId()).isEqualTo(2L);
         assertThat(saved.getAffaireNumero()).isEqualTo("A-100");
-        assertThat(saved.getProjectId()).isEqualTo("p2");
+        assertThat(saved.getProjectId()).isEqualTo(2L);
     }
 }
 

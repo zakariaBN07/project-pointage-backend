@@ -11,11 +11,22 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ProjectMetricsDTO {
-    private String projectId;
-    private String affaireNumero;
-    private String name;
-    private String username;
-    private List<String> superviseurIds;
+    private Long id;
+    private String codeAffaire;
+    private String nomAffaire;
+    private String affairesCodeAffaireUnique;
+    private String tiersX3;
+    private String devise;
+    private String chargeAffaire;
+    private String categorie;
+    private LocalDate dateAffaire;
+    private String statut;
+    private String description;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
+    private BigDecimal heuresEstimees;
+
+    private List<Long> superviseurIds;
 
     private BigDecimal plannedHours;
     private BigDecimal consumedHours;
@@ -27,30 +38,4 @@ public class ProjectMetricsDTO {
 
     private boolean isMonitored;
     private boolean timeExceedsProgress;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // New Affaire Fields
-    // ─────────────────────────────────────────────────────────────────────────
-    private String chrono;
-    private String siteDvente;
-    private String denomination;
-    private String client;
-    private String designationClient;
-    private String referenceClient;
-    private String interlocuteur;
-    private String nExonerationTVA;
-    private Integer version;
-    private Integer avenant;
-    private String devise;
-    private String chargeAffaires;
-    private LocalDate dateOuverture;
-    private LocalDate dateConclusion;
-    private String derniereEtapeRevolue;
-    private LocalDate depuisLe;
-    private Boolean reconducteAffaire;
-    private Integer nombreDevis;
-    private BigDecimal montantEstime;
-    private BigDecimal coutFournitures;
-    private BigDecimal margePrevisionelle;
-    private Integer probabiliteLancementProjet;
 }

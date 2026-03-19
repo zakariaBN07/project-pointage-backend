@@ -19,7 +19,7 @@ public class SupervisorController {
 
     @GetMapping("/employees")
     public List<EmployeeDTO> listEmployees(
-            @RequestParam(name = "supervisorId", required = false) String supervisorId
+            @RequestParam(name = "supervisorId", required = false) Long supervisorId
     ) {
         return employeeService.getEmployeesByFilter(supervisorId, null);
     }
@@ -31,7 +31,7 @@ public class SupervisorController {
 
     @PutMapping("/employees/{id}")
     public EmployeeDTO updateEmployee(
-            @PathVariable("id") String id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody EmployeeDTO dto
     ) {
         dto.setId(id);
@@ -40,7 +40,7 @@ public class SupervisorController {
 
     @DeleteMapping("/employees/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteEmployee(@PathVariable("id") String id) {
+    public void deleteEmployee(@PathVariable("id") Long id) {
         employeeService.deleteEmployee(id);
     }
 }

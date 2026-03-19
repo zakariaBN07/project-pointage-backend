@@ -1,119 +1,59 @@
 package com.example.pointage_backend.model;
 
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "projects")
+@Entity
+@Table(name = "affaires")
 public class Project {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    // affaireNumero from Excel / legacy project number
-    private String affaireNumero;
+    @Column(name = "code_affaire")
+    private String codeAffaire;
 
-    // human friendly name
-    private String name;
+    @Column(name = "nom_affaire")
+    private String nomAffaire;
 
-    // owner username
-    private String username;
+    @Column(name = "affaires_code_affaire_unique", unique = true)
+    private String affairesCodeAffaireUnique;
 
-    // planned total hours
-    private BigDecimal plannedHours;
+    @Column(name = "tiers_x3")
+    private String tiersX3;
 
-    // optional deadline
-    private LocalDate deadline;
-
-    private Long createdAt;
-    private Long updatedAt;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Affaire identification fields
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /** Chrono — unique auto-generated ID for this affaire */
-    private String chrono;
-
-    /** Site de vente */
-    private String siteDvente;
-
-    /** Dénomination — affaire slogan / title */
-    private String denomination;
-
-    /** Client code */
-    private String client;
-
-    /** Désignation Client — full client name / description */
-    private String designationClient;
-
-    /** Référence client */
-    private String referenceClient;
-
-    /** Interlocuteur code */
-    private String interlocuteur;
-
-    /** N° Exonération TVA */
-    private String nExonerationTVA;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Autres (version / revision)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /** Version */
-    private Integer version;
-
-    /** Avenant */
-    private Integer avenant;
-
-    /** Devise (currency code, e.g. EUR) */
+    @Column(name = "devise")
     private String devise;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Responsable & Dates
-    // ─────────────────────────────────────────────────────────────────────────
+    @Column(name = "charge_affaire")
+    private String chargeAffaire;
 
-    /** Chargé d'affaires code */
-    private String chargeAffaires;
+    @Column(name = "categorie")
+    private String categorie;
 
-    /** Date d'ouverture */
-    private LocalDate dateOuverture;
+    @Column(name = "date_affaire")
+    private LocalDate dateAffaire;
 
-    /** Date de conclusion */
-    private LocalDate dateConclusion;
+    @Column(name = "statut")
+    private String statut;
 
-    /** Dernière étape révolue */
-    private String derniereEtapeRevolue;
+    @Column(name = "description", length = 1000)
+    private String description;
 
-    /** Depuis le */
-    private LocalDate depuisLe;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    /** Reconduire affaire */
-    private Boolean reconducteAffaire;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    /** Nombre de devis */
-    private Integer nombreDevis;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Éléments financiers
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /** Montant estimé */
-    private BigDecimal montantEstime;
-
-    /** Coût fournitures */
-    private BigDecimal coutFournitures;
-
-    /** Marge prévisionnelle */
-    private BigDecimal margePrevisionelle;
-
-    /** Probabilité lancement du projet client (%) */
-    private Integer probabiliteLancementProjet;
+    @Column(name = "heures_estimees")
+    private BigDecimal heuresEstimees;
 }

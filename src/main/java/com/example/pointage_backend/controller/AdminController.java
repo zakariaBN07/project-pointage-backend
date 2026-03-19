@@ -34,19 +34,19 @@ public class AdminController {
     }
 
     @PutMapping("/gestionnaires/{id}")
-    public GestionnaireDTO updateGestionnaire(@PathVariable String id, @RequestBody GestionnaireDTO dto) {
+    public GestionnaireDTO updateGestionnaire(@PathVariable Long id, @RequestBody GestionnaireDTO dto) {
         dto.setId(id);
         return gestionnaireService.saveGestionnaire(dto);
     }
 
     @DeleteMapping("/gestionnaires/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteGestionnaire(@PathVariable String id) {
+    public void deleteGestionnaire(@PathVariable Long id) {
         gestionnaireService.deleteGestionnaire(id);
     }
 
     @PostMapping("/gestionnaires/{id}/reset-password")
-    public ResponseEntity<Void> resetPassword(@PathVariable String id) {
+    public ResponseEntity<Void> resetPassword(@PathVariable Long id) {
         gestionnaireService.resetPassword(id);
         return ResponseEntity.ok().build();
     }

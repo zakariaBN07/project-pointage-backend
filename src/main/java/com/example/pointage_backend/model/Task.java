@@ -1,8 +1,7 @@
 package com.example.pointage_backend.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,13 +10,15 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "tasks")
+@Entity
+@Table(name = "tasks")
 public class Task {
-
+ 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private String projectId;
+    private Long projectId;
     private String name;
 
     // percentage weight, e.g. 25.5

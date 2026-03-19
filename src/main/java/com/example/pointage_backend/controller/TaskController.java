@@ -31,12 +31,12 @@ public class TaskController {
 
     // Superviseur marks a task complete
     @PostMapping("/tasks/{taskId}/complete")
-    public Task completeTask(@PathVariable("taskId") String taskId, @RequestParam(name = "superviseurId", required = false) String superviseurId) {
+    public Task completeTask(@PathVariable("taskId") Long taskId, @RequestParam(name = "superviseurId", required = false) String superviseurId) {
         return taskService.completeTask(taskId, superviseurId);
     }
 
     @PostMapping("/tasks/{taskId}/uncomplete")
-    public Task uncompleteTask(@PathVariable("taskId") String taskId) {
+    public Task uncompleteTask(@PathVariable("taskId") Long taskId) {
         return taskService.uncompleteTask(taskId);
     }
 }

@@ -90,11 +90,11 @@ public class GestionnaireService {
         return mapToDTO(saved);
     }
 
-    public void deleteGestionnaire(String id) {
+    public void deleteGestionnaire(Long id) {
         gestionnaireRepository.deleteById(id);
     }
 
-    public void resetPassword(String id) {
+    public void resetPassword(Long id) {
         Gestionnaire gestionnaire = gestionnaireRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Gestionnaire not found"));
         

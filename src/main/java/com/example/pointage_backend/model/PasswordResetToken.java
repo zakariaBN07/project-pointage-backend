@@ -1,22 +1,24 @@
 package com.example.pointage_backend.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-@Document(collection = "password_reset_tokens")
+@Entity
+@Table(name = "password_reset_tokens")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PasswordResetToken {
+ 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     private String token;
     
-    private String gestionnaireId;
+    private Long gestionnaireId;
     
     private String email;
     

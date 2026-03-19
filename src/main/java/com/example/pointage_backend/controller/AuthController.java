@@ -76,9 +76,9 @@ public class AuthController {
         var matches = employeeService.getEmployeesByName(loginRequest.getName());
         if (!matches.isEmpty()) {
             EmployeeDTO emp = matches.get(0);
-            // Academic simplification: compare password directly with matricule
+            // Academic simplification: compare password directly with email
             if (loginRequest.getPassword() != null &&
-                    loginRequest.getPassword().equals(emp.getMatricule())) {
+                    loginRequest.getPassword().equals(emp.getEmail())) {
                 LoginResponse response = LoginResponse.builder()
                         .id(emp.getId())
                         .name(emp.getName())

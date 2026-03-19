@@ -1,10 +1,10 @@
 package com.example.pointage_backend.repository;
 
 import com.example.pointage_backend.model.Task;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-public interface TaskRepository extends MongoRepository<Task, String> {
-    List<Task> findByProjectId(String projectId);
-    void deleteByProjectId(String projectId);
+public interface TaskRepository extends JpaRepository<Task, Long> {
+    List<Task> findByProjectId(Long projectId);
+    void deleteByProjectId(Long projectId);
 }

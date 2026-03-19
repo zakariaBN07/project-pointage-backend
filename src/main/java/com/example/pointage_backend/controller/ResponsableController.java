@@ -19,7 +19,7 @@ public class ResponsableController {
 
     @GetMapping("/employees")
     public List<EmployeeDTO> listEmployees(
-            @RequestParam(name = "responsableId", required = false) String responsableId
+            @RequestParam(name = "responsableId", required = false) Long responsableId
     ) {
         return employeeService.getEmployeesByFilter(null, responsableId);
     }
