@@ -10,7 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectMetricsDTO {
+public class AffaireMetricsDTO {
     private Long id;
     private String codeAffaire;
     private String nomAffaire;

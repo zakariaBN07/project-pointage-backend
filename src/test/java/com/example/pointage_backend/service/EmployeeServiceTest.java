@@ -3,7 +3,7 @@ package com.example.pointage_backend.service;
 import com.example.pointage_backend.dto.EmployeeDTO;
 import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.repository.EmployeeRepository;
-import com.example.pointage_backend.repository.ProjectRepository;
+import com.example.pointage_backend.repository.AffaireRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,7 +25,7 @@ class EmployeeServiceTest {
     private EmployeeRepository employeeRepository;
 
     @Mock
-    private ProjectRepository projectRepository;
+    private AffaireRepository projectRepository;
 
     @InjectMocks
     private EmployeeService employeeService;
@@ -100,4 +100,3 @@ class EmployeeServiceTest {
         assertThat(saved.getProjectId()).isEqualTo(2L);
     }
 }
-

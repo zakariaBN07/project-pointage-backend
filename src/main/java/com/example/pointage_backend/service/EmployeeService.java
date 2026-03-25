@@ -2,9 +2,9 @@ package com.example.pointage_backend.service;
 
 import com.example.pointage_backend.dto.EmployeeDTO;
 import com.example.pointage_backend.model.Employee;
-import com.example.pointage_backend.model.Project;
+import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.repository.EmployeeRepository;
-import com.example.pointage_backend.repository.ProjectRepository;
+import com.example.pointage_backend.repository.AffaireRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
-    private final ProjectRepository projectRepository;
+    private final AffaireRepository projectRepository;
 
     // GET ALL
     public List<EmployeeDTO> getAllEmployees() {
@@ -54,9 +54,9 @@ public class EmployeeService {
         }
 
         if (projectId == null && normalizedAffaireNumero != null) {
-            java.util.Optional<Project> match = projectRepository.findByCodeAffaire(normalizedAffaireNumero);
+            java.util.Optional<Affaire> match = projectRepository.findByCodeAffaire(normalizedAffaireNumero);
             if (match.isEmpty()) {
-                Project p = Project.builder()
+                Affaire p = Affaire.builder()
                         .codeAffaire(normalizedAffaireNumero)
                         .nomAffaire(normalizedAffaireNumero)
                         .heuresEstimees(java.math.BigDecimal.ZERO)
@@ -67,23 +67,47 @@ public class EmployeeService {
             }
         }
 
+        // Handle full name to nom/prenom splitting if they are missing
+        String nom = dto.getNom();
+        String prenom = dto.getPrenom();
+        if ((nom == null || nom.isBlank()) && dto.getName() != null && !dto.getName().isBlank()) {
+            String[] parts = dto.getName().split(" ", 2);
+            nom = parts[0];
+            if (parts.length > 1) prenom = parts[1];
+        }
+        
+        // Database NOT NULL constraints fallbacks
+        if (nom == null || nom.isBlank()) nom = "Inconnu";
+        if (prenom == null || prenom.isBlank()) prenom = "-";
+
+        String matricule = dto.getMatricule();
+        if (matricule == null || matricule.isBlank()) {
+            matricule = "EXT-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
+        
+        String email = dto.getEmail();
+        if (email == null || email.isBlank()) {
+            email = "no-reply-" + java.util.UUID.randomUUID().toString().substring(0, 8) + "@placeholder.local";
+        }
+
         Employee employee = Employee.builder()
                 .id(dto.getId())
-                .nom(dto.getNom())
-                .prenom(dto.getPrenom())
-                .matricule(dto.getMatricule())
-                .email(dto.getEmail())
+                .nom(nom)
+                .prenom(prenom)
+                .name(dto.getName()) // Ensure full name is saved
+                .matricule(matricule)
+                .email(email)
                 .post(dto.getPost())
                 .departement(dto.getDepartement())
-                .tauxHoraire(dto.getTauxHoraire())
-                .deviseTaux(dto.getDeviseTaux())
-                .actif(dto.getActif())
+                .tauxHoraire(dto.getTauxHoraire() != null ? dto.getTauxHoraire() : 0.0)
+                .deviseTaux(dto.getDeviseTaux() != null ? dto.getDeviseTaux() : "EUR")
+                .actif(dto.getActif() != null ? dto.getActif() : true) // Default to true if not provided
                 .affaireNumero(normalizedAffaireNumero)
                 .projectId(projectId)
                 .client(dto.getClient())
                 .site(dto.getSite())
                 .plannedHours(dto.getPlannedHours())
-                .status(dto.getStatus())
+                .status(dto.getStatus() != null ? dto.getStatus() : "En attente")
                 .pointageEntree(dto.getPointageEntree())
                 .pointageSortie(dto.getPointageSortie())
                 .supervisorId(dto.getSupervisorId())
@@ -165,6 +189,7 @@ public class EmployeeService {
                 .affaireNumero(employee.getAffaireNumero())
                 .projectId(employee.getProjectId())
                 .client(employee.getClient())
+                .name(employee.getName())
                 .site(employee.getSite())
                 .plannedHours(employee.getPlannedHours())
                 .status(employee.getStatus())

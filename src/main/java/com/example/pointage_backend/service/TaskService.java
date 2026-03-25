@@ -2,10 +2,10 @@ package com.example.pointage_backend.service;
 
 import com.example.pointage_backend.dto.TaskCreateDTO;
 import com.example.pointage_backend.model.Task;
-import com.example.pointage_backend.model.Project;
+import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.repository.TaskRepository;
-import com.example.pointage_backend.repository.ProjectRepository;
+import com.example.pointage_backend.repository.AffaireRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,36 +19,40 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
-    private final ProjectRepository projectRepository;
+    private final AffaireRepository projectRepository;
     private final EmployeeRepository employeeRepository;
 
-    private Project findProjectByIdOrCodeAffaire(String projectIdOrCodeAffaire) {
+    private Affaire findProjectByIdOrCodeAffaire(String projectIdOrCodeAffaire) {
         try {
             Long id = Long.valueOf(projectIdOrCodeAffaire);
             return projectRepository.findById(id)
                     .orElseGet(() -> projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
-                            .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrCodeAffaire)));
+                            .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + projectIdOrCodeAffaire)));
         } catch (NumberFormatException e) {
             return projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
-                    .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectIdOrCodeAffaire));
+                    .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + projectIdOrCodeAffaire));
         }
     }
 
     public List<Task> getTasksForProject(String projectIdOrCodeAffaire) {
-        Project project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
+        Affaire project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
         return taskRepository.findByProjectId(project.getId());
     }
 
     public List<Task> createTasksForProject(String projectIdOrCodeAffaire, List<TaskCreateDTO> tasks) {
-        Project project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
+        Affaire project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
         Long projectId = project.getId();
 
         BigDecimal sum = tasks.stream()
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        System.out.println("DEBUG [TaskService]: Creating tasks for project " + projectIdOrCodeAffaire + " (ID: " + projectId + "). Task count: " + tasks.size() + ", Weighted sum: " + sum);
+
         if (sum.setScale(2, java.math.RoundingMode.HALF_UP).compareTo(new BigDecimal("100.00")) > 0) {
-            throw new IllegalArgumentException("Sum of task weights cannot exceed 100%. Current sum: " + sum);
+            String error = "Sum of task weights cannot exceed 100%. Current sum: " + sum;
+            System.err.println("ERROR [TaskService]: " + error);
+            throw new IllegalArgumentException(error);
         }
 
         List<Task> existingTasks = taskRepository.findByProjectId(projectId);
@@ -114,7 +118,7 @@ public class TaskService {
 
         int progressInt = progress.intValue();
 
-        Project project = projectRepository.findById(projectId)
+        Affaire project = projectRepository.findById(projectId)
                 .orElse(null);
         String codeAffaire = project != null ? project.getCodeAffaire() : null;
 

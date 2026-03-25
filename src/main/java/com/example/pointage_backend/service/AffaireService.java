@@ -1,10 +1,10 @@
 package com.example.pointage_backend.service;
 
-import com.example.pointage_backend.dto.ProjectMetricsDTO;
-import com.example.pointage_backend.model.Project;
+import com.example.pointage_backend.dto.AffaireMetricsDTO;
+import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.model.Task;
 import com.example.pointage_backend.model.Employee;
-import com.example.pointage_backend.repository.ProjectRepository;
+import com.example.pointage_backend.repository.AffaireRepository;
 import com.example.pointage_backend.repository.TaskRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,20 +16,21 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ProjectService {
-    private final ProjectRepository projectRepository;
+public class AffaireService {
+    private final AffaireRepository affaireRepository;
     private final TaskRepository taskRepository;
     private final EmployeeRepository employeeRepository;
 
-    public ProjectMetricsDTO getMetricsForProject(Long id) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + id));
+    public AffaireMetricsDTO getMetricsForAffaire(Long id) {
+        Affaire affaire = affaireRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + id));
 
         // Consumed hours: compute from Employee attendance data
+        // Assuming findByProjectId was kept since entity relation might be projectId
         List<Employee> employees = employeeRepository.findByProjectId(id);
 
-        // Planned hours: use project record (heuresEstimees), fallback to employee data if 0
-        BigDecimal planned = project.getHeuresEstimees() == null ? BigDecimal.ZERO : project.getHeuresEstimees();
+        // Planned hours: use affaire record (heuresEstimees), fallback to employee data if 0
+        BigDecimal planned = affaire.getHeuresEstimees() == null ? BigDecimal.ZERO : affaire.getHeuresEstimees();
         if (planned.compareTo(BigDecimal.ZERO) == 0 && !employees.isEmpty()) {
             for (Employee e : employees) {
                 try {
@@ -83,21 +84,21 @@ public class ProjectService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        return ProjectMetricsDTO.builder()
-                .id(project.getId())
-                .codeAffaire(project.getCodeAffaire())
-                .nomAffaire(project.getNomAffaire())
-                .affairesCodeAffaireUnique(project.getAffairesCodeAffaireUnique())
-                .tiersX3(project.getTiersX3())
-                .devise(project.getDevise())
-                .chargeAffaire(project.getChargeAffaire())
-                .categorie(project.getCategorie())
-                .dateAffaire(project.getDateAffaire())
-                .statut(project.getStatut())
-                .description(project.getDescription())
-                .createdAt(project.getCreatedAt())
-                .updatedAt(project.getUpdatedAt())
-                .heuresEstimees(project.getHeuresEstimees())
+        return AffaireMetricsDTO.builder()
+                .id(affaire.getId())
+                .codeAffaire(affaire.getCodeAffaire())
+                .nomAffaire(affaire.getNomAffaire())
+                .affairesCodeAffaireUnique(affaire.getAffairesCodeAffaireUnique())
+                .tiersX3(affaire.getTiersX3())
+                .devise(affaire.getDevise())
+                .chargeAffaire(affaire.getChargeAffaire())
+                .categorie(affaire.getCategorie())
+                .dateAffaire(affaire.getDateAffaire())
+                .statut(affaire.getStatut())
+                .description(affaire.getDescription())
+                .createdAt(affaire.getCreatedAt())
+                .updatedAt(affaire.getUpdatedAt())
+                .heuresEstimees(affaire.getHeuresEstimees())
                 .superviseurIds(superviseurIds)
                 .plannedHours(planned)
                 .consumedHours(consumed)
@@ -109,10 +110,10 @@ public class ProjectService {
                 .build();
     }
 
-    public List<ProjectMetricsDTO> listAllProjectsWithMetrics() {
-        List<Project> allProjects = projectRepository.findAll();
-        return allProjects.stream()
-                .map(p -> getMetricsForProject(p.getId()))
+    public List<AffaireMetricsDTO> listAllAffairesWithMetrics() {
+        List<Affaire> allAffaires = affaireRepository.findAll();
+        return allAffaires.stream()
+                .map(p -> getMetricsForAffaire(p.getId()))
                 .collect(Collectors.toList());
     }
 }
