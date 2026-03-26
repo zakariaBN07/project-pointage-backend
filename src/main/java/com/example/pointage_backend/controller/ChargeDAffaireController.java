@@ -10,18 +10,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/supervisor")
+@RequestMapping("/api/charge-daffaire")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class SupervisorController {
+public class ChargeDAffaireController {
 
     private final EmployeeService employeeService;
 
     @GetMapping("/employees")
     public List<EmployeeDTO> listEmployees(
-            @RequestParam(name = "supervisorId", required = false) Long supervisorId
+            @RequestParam(name = "chargeDAffaireId", required = false) Long chargeDAffaireId
     ) {
-        return employeeService.getEmployeesByFilter(supervisorId, null);
+        return employeeService.getEmployeesByFilter(chargeDAffaireId, null);
     }
 
     @PostMapping("/employees")

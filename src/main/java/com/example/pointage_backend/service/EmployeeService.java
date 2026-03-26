@@ -110,8 +110,8 @@ public class EmployeeService {
                 .status(dto.getStatus() != null ? dto.getStatus() : "En attente")
                 .pointageEntree(dto.getPointageEntree())
                 .pointageSortie(dto.getPointageSortie())
-                .supervisorId(dto.getSupervisorId())
-                .responsableId(dto.getResponsableId())
+                .chargeDAffaireId(dto.getChargeDAffaireId())
+                .ingenieurId(dto.getIngenieurId())
                 .totHrsTravaillees(dto.getTotHrsTravaillees())
                 .nbrJrsTravaillees(dto.getNbrJrsTravaillees())
                 .nbrJrsAbsence(dto.getNbrJrsAbsence())
@@ -139,12 +139,12 @@ public class EmployeeService {
     }
 
     // GET EMPLOYEES BY FILTER
-    public List<EmployeeDTO> getEmployeesByFilter(Long supervisorId, Long responsableId) {
+    public List<EmployeeDTO> getEmployeesByFilter(Long chargeDAffaireId, Long ingenieurId) {
         List<Employee> employees;
-        if (supervisorId != null) {
-            employees = employeeRepository.findBySupervisorId(supervisorId);
-        } else if (responsableId != null) {
-            employees = employeeRepository.findByResponsableId(responsableId);
+        if (chargeDAffaireId != null) {
+            employees = employeeRepository.findByChargeDAffaireId(chargeDAffaireId);
+        } else if (ingenieurId != null) {
+            employees = employeeRepository.findByIngenieurId(ingenieurId);
         } else {
             employees = employeeRepository.findAll();
         }
@@ -195,8 +195,8 @@ public class EmployeeService {
                 .status(employee.getStatus())
                 .pointageEntree(employee.getPointageEntree())
                 .pointageSortie(employee.getPointageSortie())
-                .supervisorId(employee.getSupervisorId())
-                .responsableId(employee.getResponsableId())
+                .chargeDAffaireId(employee.getChargeDAffaireId())
+                .ingenieurId(employee.getIngenieurId())
                 .totHrsTravaillees(employee.getTotHrsTravaillees())
                 .nbrJrsTravaillees(employee.getNbrJrsTravaillees())
                 .nbrJrsAbsence(employee.getNbrJrsAbsence())

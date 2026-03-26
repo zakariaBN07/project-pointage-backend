@@ -115,7 +115,7 @@ public class SyncService {
                     try {
                         String name  = safeGet(rs, colGestName,  columns, null);
                         String email = safeGet(rs, colGestEmail, columns, null);
-                        String role  = safeGet(rs, colGestRole,  columns, "superviseur");
+                        String role  = safeGet(rs, colGestRole,  columns, "chargeDAffaire");
                         String siege = safeGet(rs, colGestSiege, columns, "");
 
                         if (name == null || name.isBlank()) continue;
@@ -161,7 +161,7 @@ public class SyncService {
         return new SyncResult(true, null, created, updated, errors, messages);
     }
 
-    public SyncResult syncEmployees(Long supervisorId, Long responsableId) {
+    public SyncResult syncEmployees(Long chargeDAffaireId, Long ingenieurId) {
         if (!syncEnabled) {
             return SyncResult.disabled("sync.enabled is false in application.properties");
         }
@@ -207,14 +207,14 @@ public class SyncService {
                             if (site != null    && !site.equals(emp.getSite()))         { emp.setSite(site);         changed = true; }
                             
                             // Assign supervisor if provided and not already set
-                            if (supervisorId != null && emp.getSupervisorId() == null) {
-                                emp.setSupervisorId(supervisorId);
+                            if (chargeDAffaireId != null && emp.getChargeDAffaireId() == null) {
+                                emp.setChargeDAffaireId(chargeDAffaireId);
                                 changed = true;
                             }
 
-                            // Assign responsable if provided and not already set
-                            if (responsableId != null && emp.getResponsableId() == null) {
-                                emp.setResponsableId(responsableId);
+                            // Assign ingenieur if provided and not already set
+                            if (ingenieurId != null && emp.getIngenieurId() == null) {
+                                emp.setIngenieurId(ingenieurId);
                                 changed = true;
                             }
 
@@ -230,8 +230,8 @@ public class SyncService {
                                     .affaireNumero(affaire)
                                     .client(client)
                                     .site(site)
-                                    .supervisorId(supervisorId) // Assign to the supervisor
-                                    .responsableId(responsableId) // Assign to the responsable
+                                    .chargeDAffaireId(chargeDAffaireId) // Assign to the charge d'affaire
+                                    .ingenieurId(ingenieurId) // Assign to the ingenieur
                                     .actif(true)
                                     .status("En attente")
                                     .createdAt(LocalDateTime.now())
@@ -300,11 +300,11 @@ public class SyncService {
     }
 
     private String normalizeRole(String role) {
-        if (role == null) return "superviseur";
+        if (role == null) return "chargeDAffaire";
         String r = role.trim().toLowerCase();
-        if (r.contains("responsable")) return "responsable";
+        if (r.contains("responsable") || r.contains("ingenieur")) return "ingenieur";
         if (r.contains("admin"))       return "admin";
-        return "superviseur";
+        return "chargeDAffaire";
     }
 
     // ─────────────────────────────────────────────────────────────────────────

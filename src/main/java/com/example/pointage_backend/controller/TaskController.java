@@ -29,10 +29,10 @@ public class TaskController {
         return taskService.createTasksForProject(projectId, tasks);
     }
 
-    // Superviseur marks a task complete
+    // Chargé d'affaire marks a task complete
     @PostMapping("/tasks/{taskId}/complete")
-    public Task completeTask(@PathVariable("taskId") Long taskId, @RequestParam(name = "superviseurId", required = false) String superviseurId) {
-        return taskService.completeTask(taskId, superviseurId);
+    public Task completeTask(@PathVariable("taskId") Long taskId, @RequestParam(name = "chargeDAffaireId", required = false) String chargeDAffaireId) {
+        return taskService.completeTask(taskId, chargeDAffaireId);
     }
 
     @PostMapping("/tasks/{taskId}/uncomplete")

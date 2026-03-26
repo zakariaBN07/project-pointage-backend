@@ -87,7 +87,7 @@ public class TaskService {
         return saved;
     }
 
-    public Task completeTask(Long taskId, String superviseurId) {
+    public Task completeTask(Long taskId, String chargeDAffaireId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         task.setCompleted(true);

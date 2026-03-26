@@ -26,7 +26,7 @@ public class AffaireMetricsDTO {
     private java.time.LocalDateTime updatedAt;
     private BigDecimal heuresEstimees;
 
-    private List<Long> superviseurIds;
+    private List<Long> chargeDAffaireIds;
 
     private BigDecimal plannedHours;
     private BigDecimal consumedHours;

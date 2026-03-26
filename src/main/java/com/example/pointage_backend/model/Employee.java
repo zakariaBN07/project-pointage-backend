@@ -52,10 +52,10 @@ public class Employee {
     private String pointageSortie;
     private Long projectId;
     private Integer projectProgress;
-    private Long responsableId;
+    private Long ingenieurId;
     private String site;
     private String status;
-    private Long supervisorId;
+    private Long chargeDAffaireId;
 
     /**
      * Calculate hours worked from actual attendance data (pointageEntree and pointageSortie).

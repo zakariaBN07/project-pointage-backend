@@ -30,9 +30,9 @@ public class SyncController {
 
     @PostMapping("/employees")
     public ResponseEntity<SyncResult> syncEmployees(
-            @RequestParam(required = false) Long supervisorId,
-            @RequestParam(required = false) Long responsableId) {
-        SyncResult result = syncService.syncEmployees(supervisorId, responsableId);
+            @RequestParam(required = false) Long chargeDAffaireId,
+            @RequestParam(required = false) Long ingenieurId) {
+        SyncResult result = syncService.syncEmployees(chargeDAffaireId, ingenieurId);
         return ResponseEntity.ok(result);
     }
 

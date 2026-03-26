@@ -8,7 +8,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByName(String name);
     List<Employee> findByEmail(String email);
     List<Employee> findByProjectId(Long projectId);
-    List<Employee> findBySupervisorId(Long supervisorId);
-    List<Employee> findByResponsableId(Long responsableId);
+    List<Employee> findByChargeDAffaireId(Long chargeDAffaireId);
+    List<Employee> findByIngenieurId(Long ingenieurId);
     List<Employee> findByAffaireNumero(String affaireNumero);
 }

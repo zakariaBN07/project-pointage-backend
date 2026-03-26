@@ -74,8 +74,8 @@ public class AffaireService {
 
         boolean alert = timePercent.compareTo(progress) > 0;
 
-        List<Long> superviseurIds = employees.stream()
-                .map(Employee::getSupervisorId)
+        List<Long> chargeDAffaireIds = employees.stream()
+                .map(Employee::getChargeDAffaireId)
                 .filter(sid -> sid != null)
                 .map(sid -> {
                     try { return Long.valueOf(sid); } catch(Exception e) { return null; }
@@ -99,7 +99,7 @@ public class AffaireService {
                 .createdAt(affaire.getCreatedAt())
                 .updatedAt(affaire.getUpdatedAt())
                 .heuresEstimees(affaire.getHeuresEstimees())
-                .superviseurIds(superviseurIds)
+                .chargeDAffaireIds(chargeDAffaireIds)
                 .plannedHours(planned)
                 .consumedHours(consumed)
                 .remainingHours(remaining)

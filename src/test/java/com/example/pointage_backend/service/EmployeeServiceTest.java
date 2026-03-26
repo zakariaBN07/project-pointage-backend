@@ -41,7 +41,7 @@ class EmployeeServiceTest {
                 .email("alice@test.com")
                 .affaireNumero("A-100")
                 .projectId(2L)
-                .supervisorId(1L)
+                .chargeDAffaireId(1L)
                 .build();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
@@ -53,7 +53,7 @@ class EmployeeServiceTest {
                 .email("alice@test.com")
                 .affaireNumero("A-100")
                 .projectId(2L)
-                .supervisorId(null)
+                .chargeDAffaireId(null)
                 .build();
 
         EmployeeDTO saved = employeeService.saveEmployee(dto);
@@ -63,7 +63,7 @@ class EmployeeServiceTest {
 
         assertThat(employeeCaptor.getValue().getProjectId()).isEqualTo(2L);
         assertThat(saved.getProjectId()).isEqualTo(2L);
-        assertThat(saved.getSupervisorId()).isNull();
+        assertThat(saved.getChargeDAffaireId()).isNull();
     }
 
     @Test
@@ -74,7 +74,7 @@ class EmployeeServiceTest {
                 .email("alice@test.com")
                 .affaireNumero("A-100")
                 .projectId(2L)
-                .supervisorId(1L)
+                .chargeDAffaireId(1L)
                 .build();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
@@ -86,7 +86,7 @@ class EmployeeServiceTest {
                 .email("alice@test.com")
                 // affaireNumero omitted (null) on purpose
                 .projectId(null)
-                .supervisorId(1L)
+                .chargeDAffaireId(1L)
                 .build();
 
         EmployeeDTO saved = employeeService.saveEmployee(dto);

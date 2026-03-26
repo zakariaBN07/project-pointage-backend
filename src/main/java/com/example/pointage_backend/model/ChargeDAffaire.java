@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "supervisors")
+@Table(name = "charge_daffaires")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Supervisor {
+public class ChargeDAffaire {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

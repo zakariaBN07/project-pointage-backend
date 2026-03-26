@@ -10,17 +10,17 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/responsable")
+@RequestMapping("/api/ingenieur")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class ResponsableController {
+public class IngenieurController {
 
     private final EmployeeService employeeService;
 
     @GetMapping("/employees")
     public List<EmployeeDTO> listEmployees(
-            @RequestParam(name = "responsableId", required = false) Long responsableId
+            @RequestParam(name = "ingenieurId", required = false) Long ingenieurId
     ) {
-        return employeeService.getEmployeesByFilter(null, responsableId);
+        return employeeService.getEmployeesByFilter(null, ingenieurId);
     }
 }
