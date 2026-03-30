@@ -27,7 +27,7 @@ public class EmployeeSelfController {
 
     /**
      * Allow an employee UI to update its own pointage record (status, times, counters)
-     * using the same DTO mapping logic as supervisor/responsable flows.
+     * using the same DTO mapping logic as Ingénieur/Chargé d'affaires flows.
      */
     @PutMapping("/me/{id}")
     public EmployeeDTO updateMyPointage(@PathVariable("id") Long id, @Valid @RequestBody EmployeeDTO dto) {

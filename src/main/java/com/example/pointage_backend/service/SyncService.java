@@ -206,7 +206,7 @@ public class SyncService {
                             if (client != null  && !client.equals(emp.getClient()))     { emp.setClient(client);     changed = true; }
                             if (site != null    && !site.equals(emp.getSite()))         { emp.setSite(site);         changed = true; }
                             
-                            // Assign supervisor if provided and not already set
+                            // Assign manager if provided and not already set
                             if (chargeDAffaireId != null && emp.getChargeDAffaireId() == null) {
                                 emp.setChargeDAffaireId(chargeDAffaireId);
                                 changed = true;
@@ -302,7 +302,7 @@ public class SyncService {
     private String normalizeRole(String role) {
         if (role == null) return "chargeDAffaire";
         String r = role.trim().toLowerCase();
-        if (r.contains("responsable") || r.contains("ingenieur")) return "ingenieur";
+        if (r.contains("ingenieur") || r.contains("ingénieur") || r.contains("responsable")) return "ingenieur";
         if (r.contains("admin"))       return "admin";
         return "chargeDAffaire";
     }
