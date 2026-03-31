@@ -10,23 +10,23 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping({"/api/affaires"})
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class TaskController {
     private final TaskService taskService;
 
-    // List all tasks for a given project
-    @GetMapping("/{projectId}/tasks")
-    public List<Task> listTasks(@PathVariable("projectId") String projectId) {
-        return taskService.getTasksForProject(projectId);
+    // List all tasks for a given affaire
+    @GetMapping("/{affaireId}/tasks")
+    public List<Task> listTasks(@PathVariable("affaireId") String affaireId) {
+        return taskService.getTasksForAffaire(affaireId);
     }
 
-    // Create tasks for a project (validate sum of weights == 100)
-    @PostMapping("/{projectId}/tasks")
+    // Create tasks for an affaire (validate sum of weights == 100)
+    @PostMapping("/{affaireId}/tasks")
     @ResponseStatus(HttpStatus.CREATED)
-    public List<Task> createTasks(@PathVariable("projectId") String projectId, @RequestBody List<TaskCreateDTO> tasks) {
-        return taskService.createTasksForProject(projectId, tasks);
+    public List<Task> createTasks(@PathVariable("affaireId") String affaireId, @RequestBody List<TaskCreateDTO> tasks) {
+        return taskService.createTasksForAffaire(affaireId, tasks);
     }
 
     // Chargé d'affaire marks a task complete

@@ -1,15 +1,16 @@
 package com.example.pointage_backend.service;
 
 import com.example.pointage_backend.dto.EmployeeDTO;
-import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.model.Affaire;
-import com.example.pointage_backend.repository.EmployeeRepository;
+import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.repository.AffaireRepository;
+import com.example.pointage_backend.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,7 +20,6 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final AffaireRepository projectRepository;
 
-    // GET ALL
     public List<EmployeeDTO> getAllEmployees() {
         return employeeRepository.findAll()
                 .stream()
@@ -27,118 +27,137 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
-    // SAVE / UPDATE
+    @org.springframework.transaction.annotation.Transactional
     public EmployeeDTO saveEmployee(EmployeeDTO dto) {
+        ResolvedAffaireLink affaireLink = resolveAffaireLink(dto.getProjectId(), dto.getAffaireNumero());
+        String normalizedAffaireNumero = affaireLink.codeAffaire();
+        Long projectId = affaireLink.projectId();
 
-        Employee existing = null;
-        if (dto.getId() != null) {
-            existing = employeeRepository.findById(dto.getId()).orElse(null);
-        }
-
-        String normalizedAffaireNumero = normalizeAffaireNumero(dto.getAffaireNumero());
-        if (dto.getAffaireNumero() == null && existing != null) {
-            normalizedAffaireNumero = normalizeAffaireNumero(existing.getAffaireNumero());
-        }
-
-        // Project linking strategy:
-        // 1) If client sent projectId, keep it (prevents accidental relinking when affaireNumero is duplicated)
-        // 2) Else, if we're updating and the employee already has a projectId and affaireNumero didn't change, keep it
-        // 3) Else, resolve by affaireNumero (create if missing)
-        Long projectId = dto.getProjectId();
-        if (projectId == null && existing != null) {
-            Long existingProjectId = existing.getProjectId();
-            String existingAffaireNumero = normalizeAffaireNumero(existing.getAffaireNumero());
-            if (existingProjectId != null && Objects.equals(existingAffaireNumero, normalizedAffaireNumero)) {
-                projectId = existingProjectId;
-            }
-        }
-
-        if (projectId == null && normalizedAffaireNumero != null) {
-            java.util.Optional<Affaire> match = projectRepository.findByCodeAffaire(normalizedAffaireNumero);
-            if (match.isEmpty()) {
-                Affaire p = Affaire.builder()
-                        .codeAffaire(normalizedAffaireNumero)
-                        .nomAffaire(normalizedAffaireNumero)
-                        .heuresEstimees(java.math.BigDecimal.ZERO)
-                        .build();
-                projectId = projectRepository.save(p).getId();
-            } else {
-                projectId = match.get().getId();
-            }
-        }
-
-        // Handle full name to nom/prenom splitting if they are missing
         String nom = dto.getNom();
         String prenom = dto.getPrenom();
         if ((nom == null || nom.isBlank()) && dto.getName() != null && !dto.getName().isBlank()) {
-            String[] parts = dto.getName().split(" ", 2);
+            String[] parts = dto.getName().trim().split("\\s+", 2);
             nom = parts[0];
-            if (parts.length > 1) prenom = parts[1];
+            if (parts.length > 1) {
+                prenom = parts[1];
+            }
         }
-        
-        // Database NOT NULL constraints fallbacks
-        if (nom == null || nom.isBlank()) nom = "Inconnu";
-        if (prenom == null || prenom.isBlank()) prenom = "-";
+        if (nom == null || nom.isBlank()) {
+            nom = "Inconnu";
+        }
+        if (prenom == null || prenom.isBlank()) {
+            prenom = "-";
+        }
 
-        String matricule = dto.getMatricule();
-        if (matricule == null || matricule.isBlank()) {
+        String matricule = trimToNull(dto.getMatricule());
+        if (matricule == null) {
             matricule = "EXT-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         }
-        
-        String email = dto.getEmail();
-        if (email == null || email.isBlank()) {
-            email = "no-reply-" + java.util.UUID.randomUUID().toString().substring(0, 8) + "@placeholder.local";
+
+        Employee employee;
+        if (dto.getId() != null) {
+            employee = employeeRepository.findById(dto.getId())
+                    .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
+                            "Employee not found: " + dto.getId()));
+        } else {
+            employee = findExistingEmployeeForUpsert(dto, matricule, dto.getEmail());
         }
 
-        Employee employee = Employee.builder()
-                .id(dto.getId())
-                .nom(nom)
-                .prenom(prenom)
-                .name(dto.getName()) // Ensure full name is saved
-                .matricule(matricule)
-                .email(email)
-                .post(dto.getPost())
-                .departement(dto.getDepartement())
-                .tauxHoraire(dto.getTauxHoraire() != null ? dto.getTauxHoraire() : 0.0)
-                .deviseTaux(dto.getDeviseTaux() != null ? dto.getDeviseTaux() : "EUR")
-                .actif(dto.getActif() != null ? dto.getActif() : true) // Default to true if not provided
-                .affaireNumero(normalizedAffaireNumero)
-                .projectId(projectId)
-                .client(dto.getClient())
-                .site(dto.getSite())
-                .plannedHours(dto.getPlannedHours())
-                .status(dto.getStatus() != null ? dto.getStatus() : "En attente")
-                .pointageEntree(dto.getPointageEntree())
-                .pointageSortie(dto.getPointageSortie())
-                .chargeDAffaireId(dto.getChargeDAffaireId())
-                .ingenieurId(dto.getIngenieurId())
-                .totHrsTravaillees(dto.getTotHrsTravaillees())
-                .nbrJrsTravaillees(dto.getNbrJrsTravaillees())
-                .nbrJrsAbsence(dto.getNbrJrsAbsence())
-                .totHrsDimanche(dto.getTotHrsDimanche())
-                .nbrJrsFeries(dto.getNbrJrsFeries())
-                .nbrJrsFeriesTravailes(dto.getNbrJrsFeriesTravailes())
-                .nbrJrsConges(dto.getNbrJrsConges())
-                .nbrJrsDeplacementsMaroc(dto.getNbrJrsDeplacementsMaroc())
-                .nbrJrsPaniers(dto.getNbrJrsPaniers())
-                .nbrJrsDetente(dto.getNbrJrsDetente())
-                .nbrJrsDeplacementsExpatrie(dto.getNbrJrsDeplacementsExpatrie())
-                .nbrJrsRecuperation(dto.getNbrJrsRecuperation())
-                .nbrJrsMaladie(dto.getNbrJrsMaladie())
-                .chantierAtelier(dto.getChantierAtelier())
-                .projectProgress(dto.getProjectProgress())
-                .build();
+        String email = trimToNull(dto.getEmail());
+        if (email == null && employee != null) {
+            email = trimToNull(employee.getEmail());
+        }
+        if (email == null) {
+            email = buildFallbackEmail(matricule, dto.getChargeDAffaireId());
+        }
+
+        if (employee != null) {
+            employee.setNom(nom);
+            employee.setPrenom(prenom);
+            employee.setName(dto.getName());
+            employee.setMatricule(matricule);
+            employee.setEmail(email);
+            employee.setPost(dto.getPost());
+            employee.setDepartement(dto.getDepartement());
+            employee.setTauxHoraire(dto.getTauxHoraire() != null ? dto.getTauxHoraire() : 0.0);
+            employee.setDeviseTaux(dto.getDeviseTaux() != null ? dto.getDeviseTaux() : "EUR");
+            employee.setActif(dto.getActif() != null ? dto.getActif() : true);
+            employee.setAffaireNumero(normalizedAffaireNumero != null ? normalizedAffaireNumero : employee.getAffaireNumero());
+            employee.setProjectId(projectId != null ? projectId : employee.getProjectId());
+            employee.setClient(dto.getClient());
+            employee.setSite(dto.getSite());
+            employee.setPlannedHours(dto.getPlannedHours());
+            employee.setStatus(dto.getStatus() != null ? dto.getStatus() : "En attente");
+            employee.setPointageEntree(dto.getPointageEntree());
+            employee.setPointageSortie(dto.getPointageSortie());
+            employee.setChargeDAffaireId(dto.getChargeDAffaireId() != null ? dto.getChargeDAffaireId() : employee.getChargeDAffaireId());
+            employee.setIngenieurId(dto.getIngenieurId() != null ? dto.getIngenieurId() : employee.getIngenieurId());
+            employee.setTotHrsTravaillees(dto.getTotHrsTravaillees());
+            employee.setNbrJrsTravaillees(dto.getNbrJrsTravaillees());
+            employee.setNbrJrsAbsence(dto.getNbrJrsAbsence());
+            employee.setTotHrsDimanche(dto.getTotHrsDimanche());
+            employee.setNbrJrsFeries(dto.getNbrJrsFeries());
+            employee.setNbrJrsFeriesTravailes(dto.getNbrJrsFeriesTravailes());
+            employee.setNbrJrsConges(dto.getNbrJrsConges());
+            employee.setNbrJrsDeplacementsMaroc(dto.getNbrJrsDeplacementsMaroc());
+            employee.setNbrJrsPaniers(dto.getNbrJrsPaniers());
+            employee.setNbrJrsDetente(dto.getNbrJrsDetente());
+            employee.setNbrJrsDeplacementsExpatrie(dto.getNbrJrsDeplacementsExpatrie());
+            employee.setNbrJrsRecuperation(dto.getNbrJrsRecuperation());
+            employee.setNbrJrsMaladie(dto.getNbrJrsMaladie());
+            employee.setChantierAtelier(dto.getChantierAtelier());
+            employee.setProjectProgress(dto.getProjectProgress());
+            employee.setUpdatedAt(LocalDateTime.now());
+        } else {
+            employee = Employee.builder()
+                    .nom(nom)
+                    .prenom(prenom)
+                    .name(dto.getName())
+                    .matricule(matricule)
+                    .email(email)
+                    .post(dto.getPost())
+                    .departement(dto.getDepartement())
+                    .tauxHoraire(dto.getTauxHoraire() != null ? dto.getTauxHoraire() : 0.0)
+                    .deviseTaux(dto.getDeviseTaux() != null ? dto.getDeviseTaux() : "EUR")
+                    .actif(dto.getActif() != null ? dto.getActif() : true)
+                    .affaireNumero(normalizedAffaireNumero)
+                    .projectId(projectId)
+                    .client(dto.getClient())
+                    .site(dto.getSite())
+                    .plannedHours(dto.getPlannedHours())
+                    .status(dto.getStatus() != null ? dto.getStatus() : "En attente")
+                    .pointageEntree(dto.getPointageEntree())
+                    .pointageSortie(dto.getPointageSortie())
+                    .chargeDAffaireId(dto.getChargeDAffaireId())
+                    .ingenieurId(dto.getIngenieurId())
+                    .totHrsTravaillees(dto.getTotHrsTravaillees())
+                    .nbrJrsTravaillees(dto.getNbrJrsTravaillees())
+                    .nbrJrsAbsence(dto.getNbrJrsAbsence())
+                    .totHrsDimanche(dto.getTotHrsDimanche())
+                    .nbrJrsFeries(dto.getNbrJrsFeries())
+                    .nbrJrsFeriesTravailes(dto.getNbrJrsFeriesTravailes())
+                    .nbrJrsConges(dto.getNbrJrsConges())
+                    .nbrJrsDeplacementsMaroc(dto.getNbrJrsDeplacementsMaroc())
+                    .nbrJrsPaniers(dto.getNbrJrsPaniers())
+                    .nbrJrsDetente(dto.getNbrJrsDetente())
+                    .nbrJrsDeplacementsExpatrie(dto.getNbrJrsDeplacementsExpatrie())
+                    .nbrJrsRecuperation(dto.getNbrJrsRecuperation())
+                    .nbrJrsMaladie(dto.getNbrJrsMaladie())
+                    .chantierAtelier(dto.getChantierAtelier())
+                    .projectProgress(dto.getProjectProgress())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+        }
 
         Employee saved = employeeRepository.save(employee);
         return mapToDTO(saved);
     }
 
-    // DELETE
     public void deleteEmployee(Long id) {
         employeeRepository.deleteById(id);
     }
 
-    // GET EMPLOYEES BY FILTER
     public List<EmployeeDTO> getEmployeesByFilter(Long chargeDAffaireId, Long ingenieurId) {
         List<Employee> employees;
         if (chargeDAffaireId != null) {
@@ -153,7 +172,6 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
-    // GET BY EMAIL (for Employee self-service page)
     public List<EmployeeDTO> getEmployeesByEmail(String email) {
         if (email == null || email.isEmpty()) {
             return List.of();
@@ -163,7 +181,6 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
-    // GET BY NAME (for employee auth by name instead of matricule)
     public List<EmployeeDTO> getEmployeesByName(String name) {
         if (name == null || name.isEmpty()) {
             return List.of();
@@ -173,8 +190,12 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
-    // MAPPER
     private EmployeeDTO mapToDTO(Employee employee) {
+        Affaire linkedAffaire = resolveAffaireForEmployee(employee);
+        String codeAffaire = linkedAffaire != null
+                ? normalizeAffaireNumero(linkedAffaire.getCodeAffaire())
+                : normalizeAffaireNumero(employee.getAffaireNumero());
+
         return EmployeeDTO.builder()
                 .id(employee.getId())
                 .nom(employee.getNom())
@@ -186,8 +207,10 @@ public class EmployeeService {
                 .tauxHoraire(employee.getTauxHoraire())
                 .deviseTaux(employee.getDeviseTaux())
                 .actif(employee.getActif())
-                .affaireNumero(employee.getAffaireNumero())
+                .affaireNumero(codeAffaire)
+                .codeAffaire(codeAffaire)
                 .projectId(employee.getProjectId())
+                .affaireId(employee.getProjectId())
                 .client(employee.getClient())
                 .name(employee.getName())
                 .site(employee.getSite())
@@ -212,20 +235,122 @@ public class EmployeeService {
                 .nbrJrsMaladie(employee.getNbrJrsMaladie())
                 .chantierAtelier(employee.getChantierAtelier())
                 .projectProgress(employee.getProjectProgress())
+                .affaireProgress(employee.getProjectProgress())
                 .build();
     }
 
     private static String trimToNull(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static String normalizeAffaireNumero(String value) {
         String trimmed = trimToNull(value);
-        if (trimmed == null) return null;
-        // UI sometimes uses "-" as empty placeholder
-        if ("-".equals(trimmed)) return null;
+        if (trimmed == null) {
+            return null;
+        }
+        String collapsed = trimmed.toLowerCase().replaceAll("[\\s_-]+", "");
+        if ("-".equals(trimmed)
+                || "sansaffaire".equals(collapsed)
+                || "na".equals(collapsed)
+                || "n/a".equalsIgnoreCase(trimmed)
+                || "aucune".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
         return trimmed;
     }
+
+    private Employee findExistingEmployeeForUpsert(EmployeeDTO dto, String matricule, String email) {
+        String normalizedMatricule = trimToNull(matricule);
+        Long chargeDAffaireId = dto.getChargeDAffaireId();
+        if (normalizedMatricule != null) {
+            List<Employee> byMatricule = chargeDAffaireId != null
+                    ? employeeRepository.findByChargeDAffaireIdAndMatricule(chargeDAffaireId, normalizedMatricule)
+                    : employeeRepository.findByMatricule(normalizedMatricule);
+            if (!byMatricule.isEmpty()) {
+                return byMatricule.get(0);
+            }
+        }
+
+        String normalizedEmail = trimToNull(email);
+        if (normalizedEmail != null && !isPlaceholderEmail(normalizedEmail)) {
+            List<Employee> byEmail = chargeDAffaireId != null
+                    ? employeeRepository.findByChargeDAffaireIdAndEmail(chargeDAffaireId, normalizedEmail)
+                    : employeeRepository.findByEmail(normalizedEmail);
+            if (!byEmail.isEmpty()) {
+                return byEmail.get(0);
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isPlaceholderEmail(String email) {
+        return email != null && email.toLowerCase().endsWith("@placeholder.local");
+    }
+
+    private String buildFallbackEmail(String matricule, Long chargeDAffaireId) {
+        String normalizedMatricule = trimToNull(matricule);
+        String safeMatricule = normalizedMatricule == null
+                ? "employee"
+                : normalizedMatricule.replaceAll("[^a-zA-Z0-9]+", "-").toLowerCase();
+        String scope = chargeDAffaireId != null ? "cda-" + chargeDAffaireId : "shared";
+        return "no-reply-" + scope + "-" + safeMatricule + "@placeholder.local";
+    }
+
+    private ResolvedAffaireLink resolveAffaireLink(Long projectId, String affaireNumero) {
+        if (projectId != null) {
+            Affaire existingProject = projectRepository.findById(projectId).orElse(null);
+            if (existingProject != null) {
+                return new ResolvedAffaireLink(
+                        existingProject.getId(),
+                        normalizeAffaireNumero(existingProject.getCodeAffaire())
+                );
+            }
+        }
+
+        String normalizedAffaireNumero = normalizeAffaireNumero(affaireNumero);
+        if (normalizedAffaireNumero == null) {
+            return new ResolvedAffaireLink(projectId, null);
+        }
+
+        Affaire affaire = projectRepository.findByCodeAffaire(normalizedAffaireNumero)
+                .orElseGet(() -> projectRepository.save(
+                        Affaire.builder()
+                                .codeAffaire(normalizedAffaireNumero)
+                                .nomAffaire(normalizedAffaireNumero)
+                                .affairesCodeAffaireUnique(normalizedAffaireNumero)
+                                .devise("EUR")
+                                .statut("ACTIVE")
+                                .description("Affaire creee automatiquement depuis l'import employe.")
+                                .heuresEstimees(BigDecimal.ZERO)
+                                .build()
+                ));
+
+        return new ResolvedAffaireLink(
+                affaire.getId(),
+                normalizeAffaireNumero(affaire.getCodeAffaire())
+        );
+    }
+
+    private Affaire resolveAffaireForEmployee(Employee employee) {
+        if (employee.getProjectId() != null) {
+            Affaire linked = projectRepository.findById(employee.getProjectId()).orElse(null);
+            if (linked != null) {
+                return linked;
+            }
+        }
+
+        String normalizedAffaireNumero = normalizeAffaireNumero(employee.getAffaireNumero());
+        if (normalizedAffaireNumero == null) {
+            return null;
+        }
+
+        return projectRepository.findByCodeAffaire(normalizedAffaireNumero).orElse(null);
+    }
+
+    private record ResolvedAffaireLink(Long projectId, String codeAffaire) {}
 }

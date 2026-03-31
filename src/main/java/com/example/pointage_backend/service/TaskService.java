@@ -19,35 +19,35 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
-    private final AffaireRepository projectRepository;
+    private final AffaireRepository affaireRepository;
     private final EmployeeRepository employeeRepository;
 
-    private Affaire findProjectByIdOrCodeAffaire(String projectIdOrCodeAffaire) {
+    private Affaire findAffaireByIdOrCodeAffaire(String affaireIdOrCodeAffaire) {
         try {
-            Long id = Long.valueOf(projectIdOrCodeAffaire);
-            return projectRepository.findById(id)
-                    .orElseGet(() -> projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
-                            .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + projectIdOrCodeAffaire)));
+            Long id = Long.valueOf(affaireIdOrCodeAffaire);
+            return affaireRepository.findById(id)
+                    .orElseGet(() -> affaireRepository.findByCodeAffaire(affaireIdOrCodeAffaire)
+                            .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + affaireIdOrCodeAffaire)));
         } catch (NumberFormatException e) {
-            return projectRepository.findByCodeAffaire(projectIdOrCodeAffaire)
-                    .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + projectIdOrCodeAffaire));
+            return affaireRepository.findByCodeAffaire(affaireIdOrCodeAffaire)
+                    .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + affaireIdOrCodeAffaire));
         }
     }
 
-    public List<Task> getTasksForProject(String projectIdOrCodeAffaire) {
-        Affaire project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
-        return taskRepository.findByProjectId(project.getId());
+    public List<Task> getTasksForAffaire(String affaireIdOrCodeAffaire) {
+        Affaire affaire = findAffaireByIdOrCodeAffaire(affaireIdOrCodeAffaire);
+        return taskRepository.findByProjectId(affaire.getId());
     }
 
-    public List<Task> createTasksForProject(String projectIdOrCodeAffaire, List<TaskCreateDTO> tasks) {
-        Affaire project = findProjectByIdOrCodeAffaire(projectIdOrCodeAffaire);
-        Long projectId = project.getId();
+    public List<Task> createTasksForAffaire(String affaireIdOrCodeAffaire, List<TaskCreateDTO> tasks) {
+        Affaire affaire = findAffaireByIdOrCodeAffaire(affaireIdOrCodeAffaire);
+        Long affaireDbId = affaire.getId();
 
         BigDecimal sum = tasks.stream()
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        System.out.println("DEBUG [TaskService]: Creating tasks for project " + projectIdOrCodeAffaire + " (ID: " + projectId + "). Task count: " + tasks.size() + ", Weighted sum: " + sum);
+        System.out.println("DEBUG [TaskService]: Creating tasks for affaire " + affaireIdOrCodeAffaire + " (ID: " + affaireDbId + "). Task count: " + tasks.size() + ", Weighted sum: " + sum);
 
         if (sum.setScale(2, java.math.RoundingMode.HALF_UP).compareTo(new BigDecimal("100.00")) > 0) {
             String error = "Sum of task weights cannot exceed 100%. Current sum: " + sum;
@@ -55,7 +55,7 @@ public class TaskService {
             throw new IllegalArgumentException(error);
         }
 
-        List<Task> existingTasks = taskRepository.findByProjectId(projectId);
+        List<Task> existingTasks = taskRepository.findByProjectId(affaireDbId);
 
         List<Task> toSave = tasks.stream().map(dto -> {
             Task task;
@@ -70,7 +70,7 @@ public class TaskService {
                 task.setStatus("PENDING");
             }
 
-            task.setProjectId(projectId);
+            task.setProjectId(affaireDbId);
             task.setName(dto.getName());
             task.setWeightPercent(dto.getWeightPercent());
 
@@ -83,7 +83,7 @@ public class TaskService {
         }).collect(Collectors.toList());
 
         List<Task> saved = taskRepository.saveAll(toSave);
-        updateEmployeesProjectProgress(projectId);
+        updateEmployeesAffaireProgress(affaireDbId);
         return saved;
     }
 
@@ -94,7 +94,7 @@ public class TaskService {
         task.setStatus("COMPLETED");
         task.setCompletedAt(java.time.LocalDateTime.now());
         Task saved = taskRepository.save(task);
-        updateEmployeesProjectProgress(task.getProjectId());
+        updateEmployeesAffaireProgress(task.getProjectId());
         return saved;
     }
 
@@ -105,12 +105,12 @@ public class TaskService {
         task.setStatus("PENDING");
         task.setCompletedAt(null);
         Task saved = taskRepository.save(task);
-        updateEmployeesProjectProgress(task.getProjectId());
+        updateEmployeesAffaireProgress(task.getProjectId());
         return saved;
     }
 
-    private void updateEmployeesProjectProgress(Long projectId) {
-        List<Task> tasks = taskRepository.findByProjectId(projectId);
+    private void updateEmployeesAffaireProgress(Long affaireDbId) {
+        List<Task> tasks = taskRepository.findByProjectId(affaireDbId);
         BigDecimal progress = tasks.stream()
                 .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
@@ -118,15 +118,15 @@ public class TaskService {
 
         int progressInt = progress.intValue();
 
-        Affaire project = projectRepository.findById(projectId)
+        Affaire affaire = affaireRepository.findById(affaireDbId)
                 .orElse(null);
-        String codeAffaire = project != null ? project.getCodeAffaire() : null;
+        String codeAffaire = affaire != null ? affaire.getCodeAffaire() : null;
 
-        List<Employee> employeesById = employeeRepository.findByProjectId(projectId);
+        List<Employee> employeesById = employeeRepository.findByProjectId(affaireDbId);
         List<Employee> employeesByAffaire = codeAffaire == null
                 ? List.of()
                 : employeeRepository.findByAffaireNumero(codeAffaire).stream()
-                        .filter(e -> e.getProjectId() == null || projectId.equals(e.getProjectId()))
+                        .filter(e -> e.getProjectId() == null || affaireDbId.equals(e.getProjectId()))
                         .collect(Collectors.toList());
 
         List<Employee> employees = new java.util.ArrayList<>();
@@ -144,7 +144,7 @@ public class TaskService {
 
         for (Employee emp : employees) {
             if (emp.getProjectId() == null) {
-                emp.setProjectId(projectId);
+                emp.setProjectId(affaireDbId);
             }
             emp.setProjectProgress(progressInt);
         }

@@ -23,6 +23,7 @@ public class EmployeeDTO {
     private java.time.LocalDateTime updatedAt;
 
     private String affaireNumero;
+    private String codeAffaire;
     private String affaireIntitule; // Keep this one as it's computed/extra info
     private String chantierAtelier;
     private String client;
@@ -47,6 +48,8 @@ public class EmployeeDTO {
     private String pointageSortie;
     private Long projectId;
     private Integer projectProgress;
+    private Long affaireId;
+    private Integer affaireProgress;
     private Long ingenieurId;
     private String site;
     private String status;

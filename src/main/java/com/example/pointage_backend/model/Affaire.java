@@ -61,12 +61,29 @@ public class Affaire {
 
     @PrePersist
     protected void onCreate() {
+        applyDefaults();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        applyDefaults();
         this.updatedAt = LocalDateTime.now();
+    }
+
+    private void applyDefaults() {
+        if ((this.codeAffaire == null || this.codeAffaire.isBlank()) && this.affairesCodeAffaireUnique != null && !this.affairesCodeAffaireUnique.isBlank()) {
+            this.codeAffaire = this.affairesCodeAffaireUnique;
+        }
+        if (this.nomAffaire == null || this.nomAffaire.isBlank()) {
+            this.nomAffaire = this.codeAffaire;
+        }
+        if (this.devise == null || this.devise.isBlank()) {
+            this.devise = "EUR";
+        }
+        if (this.heuresEstimees == null) {
+            this.heuresEstimees = BigDecimal.ZERO;
+        }
     }
 }

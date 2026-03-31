@@ -1,7 +1,9 @@
 package com.example.pointage_backend.service;
 
+import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.model.Gestionnaire;
+import com.example.pointage_backend.repository.AffaireRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
 import com.example.pointage_backend.repository.GestionnaireRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,6 +36,7 @@ public class SyncService {
 
     private final GestionnaireRepository gestionnaireRepository;
     private final EmployeeRepository employeeRepository;
+    private final AffaireRepository affaireRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${sync.enabled:false}")
@@ -187,6 +191,8 @@ public class SyncService {
                         String affaire    = safeGet(rs, colEmpAffaireNumero, columns, "");
                         String client     = safeGet(rs, colEmpClient,        columns, "");
                         String site       = safeGet(rs, colEmpSite,          columns, "");
+                        String normalizedAffaireNumero = normalizeAffaireNumero(affaire);
+                        Long projectId = ensureAffaireExists(normalizedAffaireNumero);
 
                         if (email == null || email.isBlank()) continue; // email is the key
 
@@ -202,7 +208,14 @@ public class SyncService {
                             if (!fullName.isEmpty() && !fullName.equals(emp.getName())) { emp.setName(fullName);     changed = true; }
                             if (post != null    && !post.equals(emp.getPost()))         { emp.setPost(post);         changed = true; }
                             if (dept != null    && !dept.equals(emp.getDepartement()))  { emp.setDepartement(dept);  changed = true; }
-                            if (affaire != null && !affaire.equals(emp.getAffaireNumero())) { emp.setAffaireNumero(affaire); changed = true; }
+                            if (!Objects.equals(normalizedAffaireNumero, normalizeAffaireNumero(emp.getAffaireNumero()))) {
+                                emp.setAffaireNumero(normalizedAffaireNumero);
+                                changed = true;
+                            }
+                            if (!Objects.equals(projectId, emp.getProjectId())) {
+                                emp.setProjectId(projectId);
+                                changed = true;
+                            }
                             if (client != null  && !client.equals(emp.getClient()))     { emp.setClient(client);     changed = true; }
                             if (site != null    && !site.equals(emp.getSite()))         { emp.setSite(site);         changed = true; }
                             
@@ -227,7 +240,8 @@ public class SyncService {
                                     .email(email)
                                     .post(post)
                                     .departement(dept)
-                                    .affaireNumero(affaire)
+                                    .affaireNumero(normalizedAffaireNumero)
+                                    .projectId(projectId)
                                     .client(client)
                                     .site(site)
                                     .chargeDAffaireId(chargeDAffaireId) // Assign to the charge d'affaire
@@ -310,6 +324,41 @@ public class SyncService {
     // ─────────────────────────────────────────────────────────────────────────
     // Result DTO
     // ─────────────────────────────────────────────────────────────────────────
+
+    private String normalizeAffaireNumero(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) return null;
+
+        String collapsed = trimmed.toLowerCase().replaceAll("[\\s_-]+", "");
+        if ("-".equals(trimmed)
+                || "sansaffaire".equals(collapsed)
+                || "na".equals(collapsed)
+                || "n/a".equalsIgnoreCase(trimmed)
+                || "aucune".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    private Long ensureAffaireExists(String affaireNumero) {
+        if (affaireNumero == null) return null;
+
+        return affaireRepository.findByCodeAffaire(affaireNumero)
+                .map(Affaire::getId)
+                .orElseGet(() -> affaireRepository.save(
+                        Affaire.builder()
+                                .codeAffaire(affaireNumero)
+                                .nomAffaire(affaireNumero)
+                                .affairesCodeAffaireUnique(affaireNumero)
+                                .devise("EUR")
+                                .statut("ACTIVE")
+                                .description("Affaire creee automatiquement depuis la synchronisation.")
+                                .heuresEstimees(BigDecimal.ZERO)
+                                .build()
+                ).getId());
+    }
 
     public static class SyncResult {
         private final boolean success;
