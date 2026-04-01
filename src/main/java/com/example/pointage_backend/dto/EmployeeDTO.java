@@ -49,6 +49,7 @@ public class EmployeeDTO {
     private Long projectId;
     private Integer projectProgress;
     private Long affaireId;
+    
     private Integer affaireProgress;
     private Long ingenieurId;
     private String site;
