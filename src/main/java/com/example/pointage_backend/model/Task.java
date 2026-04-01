@@ -29,4 +29,5 @@ public class Task {
 
     private Boolean completed;
     private LocalDateTime completedAt;
+    private String completionDescription;
 }

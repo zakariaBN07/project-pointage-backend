@@ -78,6 +78,7 @@ public class TaskService {
                 task.setStatus(dto.getStatus());
             if (dto.getCompleted() != null)
                 task.setCompleted(dto.getCompleted());
+            task.setCompletionDescription(dto.getCompletionDescription());
 
             return task;
         }).collect(Collectors.toList());
@@ -87,12 +88,13 @@ public class TaskService {
         return saved;
     }
 
-    public Task completeTask(Long taskId, String chargeDAffaireId) {
+    public Task completeTask(Long taskId, String chargeDAffaireId, String completionDescription) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         task.setCompleted(true);
         task.setStatus("COMPLETED");
         task.setCompletedAt(java.time.LocalDateTime.now());
+        task.setCompletionDescription(completionDescription);
         Task saved = taskRepository.save(task);
         updateEmployeesAffaireProgress(task.getProjectId());
         return saved;
@@ -104,6 +106,7 @@ public class TaskService {
         task.setCompleted(false);
         task.setStatus("PENDING");
         task.setCompletedAt(null);
+        task.setCompletionDescription(null);
         Task saved = taskRepository.save(task);
         updateEmployeesAffaireProgress(task.getProjectId());
         return saved;

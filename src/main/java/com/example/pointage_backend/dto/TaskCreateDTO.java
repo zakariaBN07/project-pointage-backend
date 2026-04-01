@@ -14,4 +14,5 @@ public class TaskCreateDTO {
     private BigDecimal weightPercent;
     private String status;
     private Boolean completed;
+    private String completionDescription;
 }

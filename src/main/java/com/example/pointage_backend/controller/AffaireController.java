@@ -25,14 +25,21 @@ public class AffaireController {
     }
 
     @GetMapping("/{id}")
-    public Affaire getAffaire(@PathVariable("id") Long id) {
-        return affaireRepository.findById(id)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, "Affaire not found"));
+    public Affaire getAffaire(@PathVariable("id") String id) {
+        try {
+            return affaireService.getAffaire(id);
+        } catch (IllegalArgumentException ex) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
     }
 
     @GetMapping("/{id}/metrics")
-    public AffaireMetricsDTO getMetrics(@PathVariable("id") Long id) {
-        return affaireService.getMetricsForAffaire(id);
+    public AffaireMetricsDTO getMetrics(@PathVariable("id") String id) {
+        try {
+            return affaireService.getMetricsForAffaire(id);
+        } catch (IllegalArgumentException ex) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
     }
 
     @PostMapping

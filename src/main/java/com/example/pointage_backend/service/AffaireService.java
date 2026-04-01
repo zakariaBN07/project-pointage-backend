@@ -21,9 +21,9 @@ public class AffaireService {
     private final TaskRepository taskRepository;
     private final EmployeeRepository employeeRepository;
 
-    public AffaireMetricsDTO getMetricsForAffaire(Long id) {
-        Affaire affaire = affaireRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + id));
+    public AffaireMetricsDTO getMetricsForAffaire(String identifier) {
+        Affaire affaire = resolveAffaire(identifier);
+        Long id = affaire.getId();
 
         // Consumed hours: compute from Employee attendance data
         // Assuming findByProjectId was kept since entity relation might be projectId
@@ -113,7 +113,30 @@ public class AffaireService {
     public List<AffaireMetricsDTO> listAllAffairesWithMetrics() {
         List<Affaire> allAffaires = affaireRepository.findAll();
         return allAffaires.stream()
-                .map(p -> getMetricsForAffaire(p.getId()))
+                .map(p -> getMetricsForAffaire(String.valueOf(p.getId())))
                 .collect(Collectors.toList());
+    }
+
+    public Affaire getAffaire(String identifier) {
+        return resolveAffaire(identifier);
+    }
+
+    private Affaire resolveAffaire(String identifier) {
+        String normalizedIdentifier = String.valueOf(identifier).trim();
+        if (normalizedIdentifier.isEmpty()) {
+            throw new IllegalArgumentException("Affaire identifier is required");
+        }
+
+        try {
+            Long id = Long.valueOf(normalizedIdentifier);
+            Affaire byId = affaireRepository.findById(id).orElse(null);
+            if (byId != null) {
+                return byId;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+
+        return affaireRepository.findByCodeAffaire(normalizedIdentifier)
+                .orElseThrow(() -> new IllegalArgumentException("Affaire not found: " + normalizedIdentifier));
     }
 }

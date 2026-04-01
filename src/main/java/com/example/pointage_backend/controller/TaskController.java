@@ -31,8 +31,12 @@ public class TaskController {
 
     // Chargé d'affaire marks a task complete
     @PostMapping("/tasks/{taskId}/complete")
-    public Task completeTask(@PathVariable("taskId") Long taskId, @RequestParam(name = "chargeDAffaireId", required = false) String chargeDAffaireId) {
-        return taskService.completeTask(taskId, chargeDAffaireId);
+    public Task completeTask(
+            @PathVariable("taskId") Long taskId,
+            @RequestParam(name = "chargeDAffaireId", required = false) String chargeDAffaireId,
+            @RequestParam(name = "completionDescription", required = false) String completionDescription
+    ) {
+        return taskService.completeTask(taskId, chargeDAffaireId, completionDescription);
     }
 
     @PostMapping("/tasks/{taskId}/uncomplete")
