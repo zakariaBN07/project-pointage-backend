@@ -38,7 +38,7 @@ public class PointageService {
                 .deviseAchat(dto.getDeviseAchat())
                 .deviseVente(dto.getDeviseVente())
                 .coutEur(safeDecimal(dto.getCoutEur()))
-                .ventEur(safeDecimal(dto.getVentEur()))
+                .venteEur(safeDecimal(dto.getVenteEur()))
                 .statut(dto.getStatut())
                 .validePar(dto.getValidePar())
                 .valideAt(dto.getValidePar() != null ? LocalDateTime.now() : null)

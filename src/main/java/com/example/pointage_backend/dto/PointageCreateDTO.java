@@ -22,7 +22,7 @@ public class PointageCreateDTO {
     private String deviseAchat;
     private String deviseVente;
     private BigDecimal coutEur;
-    private BigDecimal ventEur;
+    private BigDecimal venteEur;
     private String statut;
     private Long validePar;
 }

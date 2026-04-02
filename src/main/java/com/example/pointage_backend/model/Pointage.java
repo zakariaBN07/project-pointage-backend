@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "pointage")
+@Table(name = "pointages")
 public class Pointage {
 
     @Id
@@ -56,8 +56,8 @@ public class Pointage {
     @Column(name = "cout_eur", nullable = false, precision = 15, scale = 2)
     private BigDecimal coutEur;
 
-    @Column(name = "vent_eur", nullable = false, precision = 15, scale = 2)
-    private BigDecimal ventEur;
+    @Column(name = "vente_eur", nullable = false, precision = 15, scale = 2)
+    private BigDecimal venteEur;
 
     @Column(name = "statut", nullable = false)
     private String statut;
@@ -80,7 +80,7 @@ public class Pointage {
         if (coutMad == null) coutMad = BigDecimal.ZERO;
         if (venteMad == null) venteMad = BigDecimal.ZERO;
         if (coutEur == null) coutEur = BigDecimal.ZERO;
-        if (ventEur == null) ventEur = BigDecimal.ZERO;
+        if (venteEur == null) venteEur = BigDecimal.ZERO;
         if (deviseAchat == null || deviseAchat.isBlank()) deviseAchat = "MAD";
         if (deviseVente == null || deviseVente.isBlank()) deviseVente = "MAD";
         if (statut == null || statut.isBlank()) statut = "EN_ATTENTE";
