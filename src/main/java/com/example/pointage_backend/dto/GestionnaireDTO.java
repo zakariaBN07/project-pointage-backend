@@ -18,4 +18,6 @@ public class GestionnaireDTO {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String siege;
+    /** Only for ingenieur role: ELECTRONIQUE | AUTOMATISME | CHANTIER */
+    private String typeIngenieur;
 }

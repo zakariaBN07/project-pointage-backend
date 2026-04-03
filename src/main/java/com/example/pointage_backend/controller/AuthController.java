@@ -55,6 +55,7 @@ public class AuthController {
                         .id(gestionnaire.getId())
                         .name(gestionnaire.getName())
                         .role(gestionnaire.getRole())
+                        .typeIngenieur(gestionnaire.getTypeIngenieur())
                         .build();
                 return ResponseEntity.ok(response);
             }

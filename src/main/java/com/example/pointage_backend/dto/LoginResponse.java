@@ -13,4 +13,6 @@ public class LoginResponse {
     private Long id;
     private String name;
     private String role;
+    /** Only for ingenieur role: ELECTRONIQUE | AUTOMATISME | CHANTIER */
+    private String typeIngenieur;
 }

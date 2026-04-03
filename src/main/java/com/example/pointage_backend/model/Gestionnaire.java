@@ -23,4 +23,7 @@ public class Gestionnaire {
     private String password;
 
     private String siege;
+
+    /** Only relevant when role = "ingenieur". Values: ELECTRONIQUE, AUTOMATISME, CHANTIER */
+    private String typeIngenieur;
 }

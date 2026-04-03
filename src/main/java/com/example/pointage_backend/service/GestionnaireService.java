@@ -66,6 +66,7 @@ public class GestionnaireService {
                     .role(dto.getRole())
                     .password(encodedPassword)
                     .siege(dto.getSiege())
+                    .typeIngenieur(dto.getTypeIngenieur())
                     .build();
         } else {
             gestionnaire = gestionnaireRepository.findById(dto.getId())
@@ -75,6 +76,7 @@ public class GestionnaireService {
             gestionnaire.setEmail(dto.getEmail());
             gestionnaire.setRole(dto.getRole());
             gestionnaire.setSiege(dto.getSiege());
+            gestionnaire.setTypeIngenieur(dto.getTypeIngenieur());
             
             if (rawPassword != null && !rawPassword.isEmpty()) {
                 gestionnaire.setPassword(passwordEncoder.encode(rawPassword));
@@ -116,6 +118,7 @@ public class GestionnaireService {
                 .email(gestionnaire.getEmail())
                 .role(gestionnaire.getRole())
                 .siege(gestionnaire.getSiege())
+                .typeIngenieur(gestionnaire.getTypeIngenieur())
                 .build();
     }
 }
