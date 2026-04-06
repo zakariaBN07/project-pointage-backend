@@ -3,8 +3,10 @@ package com.example.pointage_backend.service;
 import com.example.pointage_backend.dto.EmployeeDTO;
 import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.model.Employee;
+import com.example.pointage_backend.model.Pointage;
 import com.example.pointage_backend.repository.AffaireRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
+import com.example.pointage_backend.repository.PointageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,7 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final AffaireRepository projectRepository;
+    private final PointageRepository pointageRepository;
 
     public List<EmployeeDTO> getAllEmployees() {
         return employeeRepository.findAll()
@@ -196,6 +199,14 @@ public class EmployeeService {
                 ? normalizeAffaireNumero(linkedAffaire.getCodeAffaire())
                 : normalizeAffaireNumero(employee.getAffaireNumero());
 
+        // Sum actual pointages recorded in the system
+        Double totalPointageHrs = pointageRepository.findByEmployeeIdOrderByDatePointageDesc(employee.getId()).stream()
+                .mapToDouble(p -> p.getHeuresTravaillees() != null ? p.getHeuresTravaillees().doubleValue() : 0.0)
+                .sum();
+
+        // Use the pointage total if available, otherwise fallback to existing field
+        Double totHrs = totalPointageHrs > 0 ? totalPointageHrs : (employee.getTotHrsTravaillees() != null ? employee.getTotHrsTravaillees() : 0.0);
+
         return EmployeeDTO.builder()
                 .id(employee.getId())
                 .nom(employee.getNom())
@@ -220,7 +231,7 @@ public class EmployeeService {
                 .pointageSortie(employee.getPointageSortie())
                 .chargeDAffaireId(employee.getChargeDAffaireId())
                 .ingenieurId(employee.getIngenieurId())
-                .totHrsTravaillees(employee.getTotHrsTravaillees())
+                .totHrsTravaillees(totHrs)
                 .nbrJrsTravaillees(employee.getNbrJrsTravaillees())
                 .nbrJrsAbsence(employee.getNbrJrsAbsence())
                 .totHrsDimanche(employee.getTotHrsDimanche())

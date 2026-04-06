@@ -1,6 +1,7 @@
 package com.example.pointage_backend.controller;
 
 import com.example.pointage_backend.dto.PointageCreateDTO;
+import com.example.pointage_backend.dto.PointageStatusUpdateDTO;
 import com.example.pointage_backend.model.Pointage;
 import com.example.pointage_backend.service.PointageService;
 import lombok.RequiredArgsConstructor;
@@ -40,5 +41,10 @@ public class PointageController {
     @ResponseStatus(HttpStatus.CREATED)
     public List<Pointage> createPointagesBulk(@RequestBody List<PointageCreateDTO> dtos) {
         return pointageService.createPointagesBulk(dtos);
+    }
+
+    @PatchMapping("/status-update")
+    public List<Pointage> updateStatus(@RequestBody PointageStatusUpdateDTO dto) {
+        return pointageService.updatePointagesStatus(dto.getIds(), dto.getStatus(), dto.getManagerId());
     }
 }

@@ -55,6 +55,51 @@ public class PointageService {
         return created;
     }
 
+    public List<Pointage> updatePointagesStatus(List<Long> ids, String status, Long managerId) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        
+        List<Pointage> pointages = pointageRepository.findAllById(ids);
+        if (managerId != null) {
+            // Filter to ensure we only update pointages that belong to THIS manager's team
+            List<Long> allowedEmpIds = new ArrayList<>();
+            employeeRepository.findByIngenieurId(managerId).forEach(e -> allowedEmpIds.add(e.getId()));
+            employeeRepository.findByChargeDAffaireId(managerId).forEach(e -> allowedEmpIds.add(e.getId()));
+            
+            pointages = pointages.stream()
+                .filter(p -> allowedEmpIds.contains(p.getEmployeeId()))
+                .toList();
+        }
+
+        for (Pointage p : pointages) {
+            p.setStatut(status);
+            if ("Validé".equalsIgnoreCase(status) || "Valide".equalsIgnoreCase(status)) {
+                // p.setValidePar(managerId); // Skipped to avoid FK conflict with non-existent users table
+                p.setValideAt(LocalDateTime.now());
+            }
+        }
+        List<Pointage> saved = pointageRepository.saveAll(pointages);
+
+        // Recalculate progress for affected Affaires
+        List<Long> affectedAffaireIds = pointages.stream().map(Pointage::getAffaireId).distinct().toList();
+        for (Long affId : affectedAffaireIds) {
+            affaireRepository.findById(affId).ifPresent(aff -> {
+                List<Pointage> affPointages = pointageRepository.findByAffaireIdOrderByDatePointageDesc(affId);
+                double validatedHours = affPointages.stream()
+                    .filter(pt -> "Validé".equalsIgnoreCase(pt.getStatut()) || "Valide".equalsIgnoreCase(pt.getStatut()))
+                    .mapToDouble(pt -> pt.getHeuresTravaillees() != null ? pt.getHeuresTravaillees().doubleValue() : 0.0)
+                    .sum();
+                
+                double estimated = aff.getHeuresEstimees() != null ? aff.getHeuresEstimees().doubleValue() : 0.0;
+                if (estimated > 0) {
+                    aff.setAffaireProgress((validatedHours / estimated) * 100);
+                    affaireRepository.save(aff);
+                }
+            });
+        }
+        
+        return saved;
+    }
+
     public List<Pointage> getPointages(Long affaireId, Long employeeId) {
         if (employeeId != null) {
             return pointageRepository.findByEmployeeIdOrderByDatePointageDesc(employeeId);

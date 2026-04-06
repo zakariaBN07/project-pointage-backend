@@ -131,8 +131,12 @@ public class SyncService {
                 e.setClient((String) row.get("client"));
                 e.setSite((String) row.get("site"));
 
-                if (chargeDAffaireId != null) e.setChargeDAffaireId(chargeDAffaireId);
-                if (ingenieurId != null) e.setIngenieurId(ingenieurId);
+                if (chargeDAffaireId != null && e.getChargeDAffaireId() == null) {
+                    e.setChargeDAffaireId(chargeDAffaireId);
+                }
+                if (ingenieurId != null && e.getIngenieurId() == null) {
+                    e.setIngenieurId(ingenieurId);
+                }
 
                 employeeRepository.save(e);
                 count++;

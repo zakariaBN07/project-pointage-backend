@@ -4,9 +4,11 @@ import com.example.pointage_backend.dto.AffaireMetricsDTO;
 import com.example.pointage_backend.model.Affaire;
 import com.example.pointage_backend.model.Task;
 import com.example.pointage_backend.model.Employee;
+import com.example.pointage_backend.model.Pointage;
 import com.example.pointage_backend.repository.AffaireRepository;
 import com.example.pointage_backend.repository.TaskRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
+import com.example.pointage_backend.repository.PointageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ public class AffaireService {
     private final AffaireRepository affaireRepository;
     private final TaskRepository taskRepository;
     private final EmployeeRepository employeeRepository;
+    private final PointageRepository pointageRepository;
 
     public AffaireMetricsDTO getMetricsForAffaire(String identifier) {
         Affaire affaire = resolveAffaire(identifier);
@@ -49,27 +52,32 @@ public class AffaireService {
             }
         }
 
-        BigDecimal consumed = employees.stream()
-                .mapToDouble(Employee::calculateHoursWorked)
-                .boxed()
-                .map(BigDecimal::valueOf)
+        BigDecimal totalConsumed = pointageRepository.findByAffaireIdOrderByDatePointageDesc(id).stream()
+                .map(Pointage::getHeuresTravaillees)
+                .filter(h -> h != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Remaining
-        BigDecimal remaining = planned.subtract(consumed);
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+        BigDecimal validatedConsumed = pointageRepository.findByAffaireIdOrderByDatePointageDesc(id).stream()
+                .filter(p -> "Validé".equalsIgnoreCase(p.getStatut()) || "Valide".equalsIgnoreCase(p.getStatut()))
+                .map(Pointage::getHeuresTravaillees)
+                .filter(h -> h != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Progress percent: sum of weights of completed tasks
-        List<Task> tasks = taskRepository.findByProjectId(id);
-        BigDecimal progress = tasks.stream()
+        // Remaining = Planned - Validated (Budget balance)
+        BigDecimal remaining = planned.subtract(validatedConsumed);
+
+        // Progress percent: sum of weights of completed tasks OR the explicit affaireProgress field
+        BigDecimal progress = affaire.getAffaireProgress() != null 
+            ? BigDecimal.valueOf(affaire.getAffaireProgress())
+            : taskRepository.findByProjectId(id).stream()
                 .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
                 .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Time percent
+        // Time percent based on ALL consumed hours vs planned
         BigDecimal timePercent = BigDecimal.ZERO;
         if (planned.compareTo(BigDecimal.ZERO) > 0) {
-            timePercent = consumed.multiply(new BigDecimal("100")).divide(planned, 2, java.math.RoundingMode.HALF_UP);
+            timePercent = totalConsumed.multiply(new BigDecimal("100")).divide(planned, 2, java.math.RoundingMode.HALF_UP);
         }
 
         boolean alert = timePercent.compareTo(progress) > 0;
@@ -101,7 +109,7 @@ public class AffaireService {
                 .heuresEstimees(affaire.getHeuresEstimees())
                 .chargeDAffaireIds(chargeDAffaireIds)
                 .plannedHours(planned)
-                .consumedHours(consumed)
+                .consumedHours(totalConsumed)
                 .remainingHours(remaining)
                 .progressPercent(progress)
                 .timePercent(timePercent)

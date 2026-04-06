@@ -59,6 +59,9 @@ public class Affaire {
     @Column(name = "heures_estimees")
     private BigDecimal heuresEstimees;
 
+    @Column(name = "affaire_progress")
+    private Double affaireProgress;
+
     @PrePersist
     protected void onCreate() {
         applyDefaults();
