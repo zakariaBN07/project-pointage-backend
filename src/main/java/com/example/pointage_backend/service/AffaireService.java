@@ -113,7 +113,6 @@ public class AffaireService {
 
     public List<AffaireMetricsDTO> listAllAffairesWithMetrics(Long ingenieurId) {
         return affaireRepository.findAll().stream()
-                .filter(affaire -> ingenieurId == null || !getEmployeesForAffaire(affaire, ingenieurId).isEmpty())
                 .map(affaire -> getMetricsForAffaire(String.valueOf(affaire.getId()), ingenieurId))
                 .collect(Collectors.toList());
     }
