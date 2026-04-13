@@ -2,18 +2,22 @@ package com.example.pointage_backend.service;
 
 import com.example.pointage_backend.dto.AffaireMetricsDTO;
 import com.example.pointage_backend.model.Affaire;
-import com.example.pointage_backend.model.Task;
 import com.example.pointage_backend.model.Employee;
 import com.example.pointage_backend.model.Pointage;
+import com.example.pointage_backend.model.Task;
 import com.example.pointage_backend.repository.AffaireRepository;
-import com.example.pointage_backend.repository.TaskRepository;
 import com.example.pointage_backend.repository.EmployeeRepository;
 import com.example.pointage_backend.repository.PointageRepository;
+import com.example.pointage_backend.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,70 +29,55 @@ public class AffaireService {
     private final PointageRepository pointageRepository;
 
     public AffaireMetricsDTO getMetricsForAffaire(String identifier) {
+        return getMetricsForAffaire(identifier, null);
+    }
+
+    public AffaireMetricsDTO getMetricsForAffaire(String identifier, Long ingenieurId) {
         Affaire affaire = resolveAffaire(identifier);
-        Long id = affaire.getId();
+        Long affaireId = affaire.getId();
 
-        // Consumed hours: compute from Employee attendance data
-        // Assuming findByProjectId was kept since entity relation might be projectId
-        List<Employee> employees = employeeRepository.findByProjectId(id);
+        List<Employee> employees = getEmployeesForAffaire(affaire, ingenieurId);
+        List<Long> scopedEmployeeIds = employees.stream()
+                .map(Employee::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
 
-        // Planned hours: use affaire record (heuresEstimees), fallback to employee data if 0
-        BigDecimal planned = affaire.getHeuresEstimees() == null ? BigDecimal.ZERO : affaire.getHeuresEstimees();
-        if (planned.compareTo(BigDecimal.ZERO) == 0 && !employees.isEmpty()) {
-            for (Employee e : employees) {
-                try {
-                    String raw = e.getPlannedHours();
-                    if (raw != null && !raw.isEmpty()) {
-                        String cleaned = raw.replaceAll("[^0-9,. ]", "").trim().replace(" ", "").replace(",", ".");
-                        if (!cleaned.isEmpty()) {
-                            BigDecimal empPlanned = new BigDecimal(cleaned);
-                            if (empPlanned.compareTo(BigDecimal.ZERO) > 0) {
-                                planned = empPlanned;
-                                break; 
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-        }
+        List<Pointage> scopedPointages = pointageRepository.findByAffaireIdOrderByDatePointageDesc(affaireId).stream()
+                .filter(pointage -> scopedEmployeeIds.isEmpty() || scopedEmployeeIds.contains(pointage.getEmployeeId()))
+                .toList();
 
-        BigDecimal totalConsumed = pointageRepository.findByAffaireIdOrderByDatePointageDesc(id).stream()
+        BigDecimal planned = ingenieurId != null
+                ? resolveScopedPlannedHours(affaire, employees)
+                : resolveGlobalPlannedHours(affaire, employees);
+
+        BigDecimal totalConsumed = scopedPointages.stream()
                 .map(Pointage::getHeuresTravaillees)
-                .filter(h -> h != null)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal validatedConsumed = pointageRepository.findByAffaireIdOrderByDatePointageDesc(id).stream()
-                .filter(p -> "Validé".equalsIgnoreCase(p.getStatut()) || "Valide".equalsIgnoreCase(p.getStatut()))
+        BigDecimal validatedConsumed = scopedPointages.stream()
+                .filter(pointage -> isValidated(pointage.getStatut()))
                 .map(Pointage::getHeuresTravaillees)
-                .filter(h -> h != null)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Remaining = Planned - Validated (Budget balance)
         BigDecimal remaining = planned.subtract(validatedConsumed);
+        BigDecimal progress = ingenieurId != null
+                ? calculateScopedProgress(planned, validatedConsumed)
+                : calculateGlobalProgress(affaire, affaireId);
 
-        // Progress percent: sum of weights of completed tasks OR the explicit affaireProgress field
-        BigDecimal progress = affaire.getAffaireProgress() != null 
-            ? BigDecimal.valueOf(affaire.getAffaireProgress())
-            : taskRepository.findByProjectId(id).stream()
-                .filter(t -> Boolean.TRUE.equals(t.getCompleted()))
-                .map(t -> t.getWeightPercent() == null ? BigDecimal.ZERO : t.getWeightPercent())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Time percent based on ALL consumed hours vs planned
         BigDecimal timePercent = BigDecimal.ZERO;
         if (planned.compareTo(BigDecimal.ZERO) > 0) {
-            timePercent = totalConsumed.multiply(new BigDecimal("100")).divide(planned, 2, java.math.RoundingMode.HALF_UP);
+            timePercent = totalConsumed.multiply(new BigDecimal("100"))
+                    .divide(planned, 2, RoundingMode.HALF_UP);
         }
 
         boolean alert = timePercent.compareTo(progress) > 0;
 
         List<Long> chargeDAffaireIds = employees.stream()
                 .map(Employee::getChargeDAffaireId)
-                .filter(sid -> sid != null)
-                .map(sid -> {
-                    try { return Long.valueOf(sid); } catch(Exception e) { return null; }
-                })
-                .filter(sid -> sid != null)
+                .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -119,14 +108,154 @@ public class AffaireService {
     }
 
     public List<AffaireMetricsDTO> listAllAffairesWithMetrics() {
-        List<Affaire> allAffaires = affaireRepository.findAll();
-        return allAffaires.stream()
-                .map(p -> getMetricsForAffaire(String.valueOf(p.getId())))
+        return listAllAffairesWithMetrics(null);
+    }
+
+    public List<AffaireMetricsDTO> listAllAffairesWithMetrics(Long ingenieurId) {
+        return affaireRepository.findAll().stream()
+                .filter(affaire -> ingenieurId == null || !getEmployeesForAffaire(affaire, ingenieurId).isEmpty())
+                .map(affaire -> getMetricsForAffaire(String.valueOf(affaire.getId()), ingenieurId))
                 .collect(Collectors.toList());
     }
 
     public Affaire getAffaire(String identifier) {
         return resolveAffaire(identifier);
+    }
+
+    private List<Employee> getEmployeesForAffaire(Affaire affaire, Long ingenieurId) {
+        List<Employee> candidates = new ArrayList<>();
+
+        if (ingenieurId != null) {
+            candidates.addAll(employeeRepository.findByIngenieurId(ingenieurId));
+        } else {
+            candidates.addAll(employeeRepository.findByProjectId(affaire.getId()));
+            if (affaire.getCodeAffaire() != null && !affaire.getCodeAffaire().isBlank()) {
+                candidates.addAll(employeeRepository.findByAffaireNumero(affaire.getCodeAffaire()));
+            }
+        }
+
+        String normalizedAffaireCode = normalizeAffaireCode(affaire.getCodeAffaire());
+
+        return new ArrayList<>(candidates.stream()
+                .filter(Objects::nonNull)
+                .filter(employee -> matchesAffaire(employee, affaire.getId(), normalizedAffaireCode))
+                .filter(employee -> employee.getId() != null)
+                .collect(Collectors.toMap(
+                        Employee::getId,
+                        employee -> employee,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ))
+                .values());
+    }
+
+    private boolean matchesAffaire(Employee employee, Long affaireId, String normalizedAffaireCode) {
+        if (employee == null) {
+            return false;
+        }
+
+        if (Objects.equals(employee.getProjectId(), affaireId)) {
+            return true;
+        }
+
+        String employeeAffaireCode = normalizeAffaireCode(employee.getAffaireNumero());
+        return employeeAffaireCode != null && employeeAffaireCode.equals(normalizedAffaireCode);
+    }
+
+    private String normalizeAffaireCode(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized.toLowerCase();
+    }
+
+    private BigDecimal resolveGlobalPlannedHours(Affaire affaire, List<Employee> employees) {
+        BigDecimal planned = affaire.getHeuresEstimees() == null ? BigDecimal.ZERO : affaire.getHeuresEstimees();
+        if (planned.compareTo(BigDecimal.ZERO) > 0) {
+            return planned;
+        }
+
+        for (Employee employee : employees) {
+            BigDecimal employeePlanned = parseEmployeePlannedHours(employee);
+            if (employeePlanned.compareTo(BigDecimal.ZERO) > 0) {
+                return employeePlanned;
+            }
+        }
+
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolveScopedPlannedHours(Affaire affaire, List<Employee> employees) {
+        BigDecimal employeePlannedSum = employees.stream()
+                .map(this::parseEmployeePlannedHours)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (employeePlannedSum.compareTo(BigDecimal.ZERO) > 0) {
+            return employeePlannedSum;
+        }
+
+        return affaire.getHeuresEstimees() == null ? BigDecimal.ZERO : affaire.getHeuresEstimees();
+    }
+
+    private BigDecimal parseEmployeePlannedHours(Employee employee) {
+        if (employee == null || employee.getPlannedHours() == null || employee.getPlannedHours().isBlank()) {
+            return BigDecimal.ZERO;
+        }
+
+        try {
+            String cleaned = employee.getPlannedHours()
+                    .replaceAll("[^0-9,. ]", "")
+                    .trim()
+                    .replace(" ", "")
+                    .replace(",", ".");
+
+            if (cleaned.isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+
+            return new BigDecimal(cleaned);
+        } catch (Exception ignored) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal calculateGlobalProgress(Affaire affaire, Long affaireId) {
+        if (affaire.getAffaireProgress() != null) {
+            return BigDecimal.valueOf(affaire.getAffaireProgress());
+        }
+
+        return taskRepository.findByProjectId(affaireId).stream()
+                .filter(task -> Boolean.TRUE.equals(task.getCompleted()))
+                .map(Task::getWeightPercent)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateScopedProgress(BigDecimal planned, BigDecimal validatedConsumed) {
+        if (planned.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return validatedConsumed.multiply(new BigDecimal("100"))
+                .divide(planned, 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean isValidated(String statut) {
+        if (statut == null) {
+            return false;
+        }
+
+        String normalized = statut
+                .trim()
+                .toLowerCase()
+                .replace("é", "e")
+                .replace("è", "e")
+                .replace("ê", "e")
+                .replace("Ã©", "e");
+
+        return normalized.contains("valid");
     }
 
     private Affaire resolveAffaire(String identifier) {

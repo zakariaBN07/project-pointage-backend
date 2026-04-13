@@ -20,8 +20,10 @@ public class AffaireController {
     private final AffaireService affaireService;
 
     @GetMapping
-    public List<AffaireMetricsDTO> listAffaires() {
-        return affaireService.listAllAffairesWithMetrics();
+    public List<AffaireMetricsDTO> listAffaires(
+            @RequestParam(name = "ingenieurId", required = false) Long ingenieurId
+    ) {
+        return affaireService.listAllAffairesWithMetrics(ingenieurId);
     }
 
     @GetMapping("/{id}")
@@ -34,9 +36,12 @@ public class AffaireController {
     }
 
     @GetMapping("/{id}/metrics")
-    public AffaireMetricsDTO getMetrics(@PathVariable("id") String id) {
+    public AffaireMetricsDTO getMetrics(
+            @PathVariable("id") String id,
+            @RequestParam(name = "ingenieurId", required = false) Long ingenieurId
+    ) {
         try {
-            return affaireService.getMetricsForAffaire(id);
+            return affaireService.getMetricsForAffaire(id, ingenieurId);
         } catch (IllegalArgumentException ex) {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
         }
