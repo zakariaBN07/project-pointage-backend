@@ -10,6 +10,9 @@ import com.example.pointage_backend.repository.EmployeeRepository;
 import com.example.pointage_backend.repository.PointageRepository;
 import com.example.pointage_backend.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -37,15 +40,78 @@ public class AffaireService {
         Long affaireId = affaire.getId();
 
         List<Employee> employees = getEmployeesForAffaire(affaire, ingenieurId);
-        List<Long> scopedEmployeeIds = employees.stream()
+        List<Pointage> pointages = pointageRepository.findByAffaireIdOrderByDatePointageDesc(affaireId);
+        List<Task> tasks = taskRepository.findByProjectId(affaireId);
+
+        return computeMetrics(affaire, ingenieurId, employees, pointages, tasks);
+    }
+
+    public List<AffaireMetricsDTO> listAllAffairesWithMetrics() {
+        return listAllAffairesWithMetrics(null);
+    }
+
+    public List<AffaireMetricsDTO> listAllAffairesWithMetrics(Long ingenieurId) {
+        List<Affaire> affaires = affaireRepository.findAll();
+        if (affaires.isEmpty()) return new ArrayList<>();
+
+        List<Long> affaireIds = affaires.stream().map(Affaire::getId).collect(Collectors.toList());
+        List<String> codes = affaires.stream()
+                .map(Affaire::getCodeAffaire)
+                .filter(Objects::nonNull)
+                .filter(c -> !c.isBlank())
+                .collect(Collectors.toList());
+
+        // Bulk load all data for these affaires
+        List<Pointage> allPointages = pointageRepository.findByAffaireIdIn(affaireIds);
+        List<Task> allTasks = taskRepository.findByProjectIdIn(affaireIds);
+        
+        final List<Employee> allRelevantEmployees;
+        if (ingenieurId != null) {
+            allRelevantEmployees = employeeRepository.findByIngenieurId(ingenieurId);
+        } else {
+            List<Employee> rawRelevantEmployees = new ArrayList<>(employeeRepository.findByProjectIdIn(affaireIds));
+            if (!codes.isEmpty()) {
+                rawRelevantEmployees.addAll(employeeRepository.findByAffaireNumeroIn(codes));
+            }
+            // Ensure unique employees
+            allRelevantEmployees = rawRelevantEmployees.stream()
+                    .filter(Objects::nonNull)
+                    .filter(e -> e.getId() != null)
+                    .collect(Collectors.toMap(Employee::getId, e -> e, (e1, e2) -> e1))
+                    .values().stream().collect(Collectors.toList());
+        }
+
+        // Pre-group data
+        Map<Long, List<Pointage>> pointagesByAffaire = allPointages.stream()
+                .filter(p -> p.getAffaireId() != null)
+                .collect(Collectors.groupingBy(Pointage::getAffaireId));
+
+        Map<Long, List<Task>> tasksByAffaire = allTasks.stream()
+                .filter(t -> t.getProjectId() != null)
+                .collect(Collectors.groupingBy(Task::getProjectId));
+
+        return affaires.stream().map(affaire -> {
+            List<Employee> employees = filterEmployeesForAffaire(affaire, allRelevantEmployees);
+            List<Pointage> pointages = pointagesByAffaire.getOrDefault(affaire.getId(), new ArrayList<>());
+            List<Task> tasks = tasksByAffaire.getOrDefault(affaire.getId(), new ArrayList<>());
+            return computeMetrics(affaire, ingenieurId, employees, pointages, tasks);
+        }).collect(Collectors.toList());
+    }
+
+    private AffaireMetricsDTO computeMetrics(Affaire affaire, Long ingenieurId, List<Employee> employees, List<Pointage> pointages, List<Task> tasks) {
+        Set<Long> scopedEmployeeIds = employees.stream()
                 .map(Employee::getId)
                 .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+                .collect(Collectors.toSet());
 
-        List<Pointage> scopedPointages = pointageRepository.findByAffaireIdOrderByDatePointageDesc(affaireId).stream()
-                .filter(pointage -> scopedEmployeeIds.isEmpty() || scopedEmployeeIds.contains(pointage.getEmployeeId()))
-                .toList();
+        List<Pointage> scopedPointages = pointages.stream()
+                .filter(pointage -> {
+                    if (ingenieurId != null) {
+                        return scopedEmployeeIds.contains(pointage.getEmployeeId());
+                    }
+                    return scopedEmployeeIds.isEmpty() || scopedEmployeeIds.contains(pointage.getEmployeeId());
+                })
+                .collect(Collectors.toList());
 
         BigDecimal planned = ingenieurId != null
                 ? resolveScopedPlannedHours(affaire, employees)
@@ -65,7 +131,7 @@ public class AffaireService {
         BigDecimal remaining = planned.subtract(validatedConsumed);
         BigDecimal progress = ingenieurId != null
                 ? calculateScopedProgress(planned, validatedConsumed)
-                : calculateGlobalProgress(affaire, affaireId);
+                : calculateGlobalProgress(affaire, tasks);
 
         BigDecimal timePercent = BigDecimal.ZERO;
         if (planned.compareTo(BigDecimal.ZERO) > 0) {
@@ -107,16 +173,6 @@ public class AffaireService {
                 .build();
     }
 
-    public List<AffaireMetricsDTO> listAllAffairesWithMetrics() {
-        return listAllAffairesWithMetrics(null);
-    }
-
-    public List<AffaireMetricsDTO> listAllAffairesWithMetrics(Long ingenieurId) {
-        return affaireRepository.findAll().stream()
-                .map(affaire -> getMetricsForAffaire(String.valueOf(affaire.getId()), ingenieurId))
-                .collect(Collectors.toList());
-    }
-
     public Affaire getAffaire(String identifier) {
         return resolveAffaire(identifier);
     }
@@ -133,6 +189,10 @@ public class AffaireService {
             }
         }
 
+        return filterEmployeesForAffaire(affaire, candidates);
+    }
+
+    private List<Employee> filterEmployeesForAffaire(Affaire affaire, List<Employee> candidates) {
         String normalizedAffaireCode = normalizeAffaireCode(affaire.getCodeAffaire());
 
         return new ArrayList<>(candidates.stream()
@@ -220,12 +280,12 @@ public class AffaireService {
         }
     }
 
-    private BigDecimal calculateGlobalProgress(Affaire affaire, Long affaireId) {
+    private BigDecimal calculateGlobalProgress(Affaire affaire, List<Task> tasks) {
         if (affaire.getAffaireProgress() != null) {
             return BigDecimal.valueOf(affaire.getAffaireProgress());
         }
 
-        return taskRepository.findByProjectId(affaireId).stream()
+        return tasks.stream()
                 .filter(task -> Boolean.TRUE.equals(task.getCompleted()))
                 .map(Task::getWeightPercent)
                 .filter(Objects::nonNull)

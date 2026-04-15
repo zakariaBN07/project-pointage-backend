@@ -9,4 +9,5 @@ public interface PointageRepository extends JpaRepository<Pointage, Long> {
     List<Pointage> findByEmployeeIdOrderByDatePointageDesc(Long employeeId);
     List<Pointage> findByAffaireIdOrderByDatePointageDesc(Long affaireId);
     List<Pointage> findByEmployeeIdInOrderByDatePointageDesc(List<Long> employeeIds);
+    List<Pointage> findByAffaireIdIn(List<Long> affaireIds);
 }

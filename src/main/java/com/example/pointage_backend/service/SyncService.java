@@ -107,20 +107,34 @@ public class SyncService {
     @Transactional
     public SyncResult syncEmployees(Long chargeDAffaireId, Long ingenieurId) {
         try {
-            int count = 0;
             List<Map<String, Object>> sourceRows = jdbcTemplate.queryForList(
                 "SELECT nom, prenom, matricule, email, post, departement, affaire_numero, client, site FROM " + employeeTable
             );
+            if (sourceRows.isEmpty()) {
+                return SyncResult.builder().message("No employees to sync").count(0).success(true).build();
+            }
+
+            // Map existing employees for fast lookup
+            List<Employee> allExisting = employeeRepository.findAll();
+            Map<String, Employee> byMatricule = allExisting.stream()
+                .filter(e -> e.getMatricule() != null)
+                .collect(Collectors.toMap(Employee::getMatricule, e -> e, (e1, e2) -> e1));
+            Map<String, Employee> byEmail = allExisting.stream()
+                .filter(e -> e.getEmail() != null)
+                .collect(Collectors.toMap(Employee::getEmail, e -> e, (e1, e2) -> e1));
+
+            List<Employee> toSave = new ArrayList<>();
+            int count = 0;
             for (Map<String, Object> row : sourceRows) {
                 String matricule = (String) row.get("matricule");
                 String email = (String) row.get("email");
                 if (matricule == null && email == null) continue;
 
-                List<Employee> existingList = (matricule != null) 
-                    ? employeeRepository.findByMatricule(matricule) 
-                    : employeeRepository.findByEmail(email);
+                Employee e = (matricule != null) ? byMatricule.get(matricule) : null;
+                if (e == null && email != null) e = byEmail.get(email);
                 
-                Employee e = existingList.isEmpty() ? new Employee() : existingList.get(0);
+                if (e == null) e = new Employee();
+
                 e.setNom((String) row.get("nom"));
                 e.setPrenom((String) row.get("prenom"));
                 e.setMatricule(matricule);
@@ -138,9 +152,14 @@ public class SyncService {
                     e.setIngenieurId(ingenieurId);
                 }
 
-                employeeRepository.save(e);
+                toSave.add(e);
                 count++;
             }
+            
+            if (!toSave.isEmpty()) {
+                employeeRepository.saveAll(toSave);
+            }
+            
             return SyncResult.builder().message("Sync successful for " + count + " employees").count(count).success(true).build();
         } catch (Exception e) {
             logger.error("Sync employees failed", e);

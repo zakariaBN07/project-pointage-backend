@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByProjectId(Long projectId);
+    List<Task> findByProjectIdIn(List<Long> projectIds);
     void deleteByProjectId(Long projectId);
 }

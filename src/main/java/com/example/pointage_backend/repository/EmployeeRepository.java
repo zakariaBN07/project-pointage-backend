@@ -14,4 +14,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByChargeDAffaireIdAndMatricule(Long chargeDAffaireId, String matricule);
     List<Employee> findByIngenieurId(Long ingenieurId);
     List<Employee> findByAffaireNumero(String affaireNumero);
+    List<Employee> findByProjectIdIn(List<Long> projectIds);
+    List<Employee> findByAffaireNumeroIn(List<String> affaireNumeros);
 }
